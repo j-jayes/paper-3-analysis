@@ -4,10 +4,23 @@ from shapely.geometry import Point, LineString
 from statsmodels.formula.api import ols
 import pathlib
 import openpyxl
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Set parameters here
+distances = [100, 150, 200, 250]  # replace with your distances in km
+exclude_touching = True  # set to False if you do not want to exclude parishes touching treatment group
+source_type = "transmitted"  # set to 'water', 'transmitted', or None
+outcome_var = 'num_power_stations'  # set to 'amount_final' or 'num_power_stations'
 
 # Reading Excel Sheet
 power_stations_path = pathlib.Path('data/power-stations/power-stations.xlsx')
 power_stations_df = pd.read_excel(power_stations_path)
+
+# Filter based on source type
+if source_type is not None:
+    power_stations_df = power_stations_df[power_stations_df['source_final'] == source_type]
 
 # Reading shapefile
 parishes_path = pathlib.Path('data/maps/Swedish_parishes_1926.shp')
@@ -22,6 +35,8 @@ parishes = parishes.to_crs('EPSG:4326')
 
 # Spatial join
 stations_with_parish = gpd.sjoin(geo_power_stations, parishes, how='left', op='within')
+num_power_stations = stations_with_parish.groupby('ref_code').size().reset_index(name='num_power_stations')
+
 
 # olidan coords: 12.272571287279908, 58.27550603306433
 # älvkarleby coords: 17.443262677788724, 60.5633613884066
@@ -36,7 +51,6 @@ line = LineString([station1_coords, station2_coords])
 line_gdf = gpd.GeoDataFrame(geometry=[line], crs='EPSG:4326')
 
 # Create buffers
-distances = [100, 150, 200]  # replace with your distances in km
 buffer_gdfs = [gpd.GeoDataFrame(geometry=gpd.GeoSeries(line_gdf.to_crs('EPSG:32633').buffer(distance*1000)), crs='EPSG:32633').to_crs('EPSG:4326') for distance in distances]
 
 control_parishes = {}
@@ -66,55 +80,83 @@ treated_parishes_geometry = gpd.GeoDataFrame(treated_parishes_geometry, crs='EPS
 # Calculate total power in each parish
 total_power = stations_with_parish.groupby('ref_code')['amount_final'].sum().reset_index()
 
-# Add this data to "parishes" and "control_parishes"
+# Add these data to "parishes" and "control_parishes"
 parishes = parishes.merge(total_power, on='ref_code', how='left')
+parishes = parishes.merge(num_power_stations, on='ref_code', how='left')
+
 for distance in distances:
     control_parishes[distance] = control_parishes[distance].merge(total_power, on='ref_code', how='left')
+    control_parishes[distance] = control_parishes[distance].merge(num_power_stations, on='ref_code', how='left')
 
-# in control_parishes, replace NaN with 0 in amount_final
+
+# Replace NaN with 0 in the outcome variables
 for distance in distances:
     control_parishes[distance]['amount_final'] = control_parishes[distance]['amount_final'].fillna(0)
+    control_parishes[distance]['num_power_stations'] = control_parishes[distance]['num_power_stations'].fillna(0)
+
+
+# in control parishes, generate treament column = 0
+for distance in distances:
+    control_parishes[distance]['treatment'] = 0
 
 # Find all parishes that touch a treated parish
-touching_parishes = gpd.overlay(parishes, treated_parishes_geometry, how='intersection', keep_geom_type=False)
-# drop ref_code_2 and rename ref_code_1 to ref_code
-touching_parishes = touching_parishes.drop(columns=['ref_code_2']).rename(columns={'ref_code_1': 'ref_code'})
+if exclude_touching:
+    touching_parishes = gpd.overlay(parishes, treated_parishes_geometry, how='intersection', keep_geom_type=False)
+    # drop ref_code_2 and rename ref_code_1 to ref_code
+    touching_parishes = touching_parishes.drop(columns=['ref_code_2']).rename(columns={'ref_code_1': 'ref_code'})
 
-# Exclude these parishes from control groups
-for distance in distances:
-    control_parishes[distance] = control_parishes[distance][~control_parishes[distance]['ref_code'].isin(touching_parishes['ref_code'])]
-
-
-# Visualize:
-import matplotlib.pyplot as plt
+    # Exclude these parishes from control groups
+    for distance in distances:
+        control_parishes[distance] = control_parishes[distance][~control_parishes[distance]['ref_code'].isin(touching_parishes['ref_code'])]
 
 # Create a DataFrame to store results
-results_df = pd.DataFrame(columns=['Distance', 'Coefficient', 'CI_lower', 'CI_upper', 'P-value', 'F-statistic'])
+results_df = pd.DataFrame(columns=['Distance', 'Exclude_Touching', 'Source_Type', 'Outcome_Var', 'Coefficient', 'CI_lower', 'CI_upper', 'P-value', 'F-statistic'])
+
+parishes_with_treatment = parishes[parishes['treatment'] == 'treated']
+# code treatment as 1
+parishes_with_treatment['treatment'] = 1
 
 for distance in distances:
-    data = pd.concat([parishes, control_parishes[distance]])
-    model = ols("amount_final ~ treatment", data=data).fit()
-    coef = model.params['treatment[T.treated]']
-    ci_lower, ci_upper = model.conf_int().loc['treatment[T.treated]']
-    p_value = model.pvalues['treatment[T.treated]']
+    data = pd.concat([parishes_with_treatment, control_parishes[distance]])
+    model = ols(f"{outcome_var} ~ treatment", data=data).fit()
+    coef = model.params['treatment']
+    ci_lower, ci_upper = model.conf_int().loc['treatment']
+    p_value = model.pvalues['treatment']
     f_stat = model.fvalue
-    new_row = pd.DataFrame({'Distance': [distance], 'Coefficient': [coef], 'CI_lower': [ci_lower], 'CI_upper': [ci_upper], 'P-value': [p_value], 'F-statistic': [f_stat]})
+    new_row = pd.DataFrame({'Distance': [distance], 'Exclude_Touching': [exclude_touching], 'Source_Type': [source_type], 'Outcome_Var': [outcome_var], 'Coefficient': [coef], 'CI_lower': [ci_lower], 'CI_upper': [ci_upper], 'P-value': [p_value], 'F-statistic': [f_stat]})
     results_df = pd.concat([results_df, new_row], ignore_index=True)
+    # Generate map
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_aspect('equal')
+    
+    # plot parishes
+    parishes.boundary.plot(ax=ax, color='black', linewidth=0.5)
+    
+    # plot control group
+    control_parishes[distance].plot(ax=ax, color='blue', alpha=0.5)
+    
+    # plot treatment group
+    parishes_with_treatment.plot(ax=ax, color='red', alpha=0.5)
+    
+    plt.title(f'Treatment and Control Groups (Control Distance {distance} km)')
+    plt.axis('off')
+    
+    plt.savefig(results_folder / f'groups_map_{distance}km.png', bbox_inches='tight')
 
 
-# Create plot
+# Save the coefficient plot and table
+results_folder = pathlib.Path('results')
+results_folder.mkdir(exist_ok=True)  # create the results folder if it doesn't already exist
+
 plt.figure(figsize=(10, 6))
 plt.errorbar(x='Distance', y='Coefficient', yerr=[results_df['Coefficient'] - results_df['CI_lower'], results_df['CI_upper'] - results_df['Coefficient']], data=results_df, fmt='o')
-# add x-tick labels for distances
-plt.xticks(np.arange(len(distances)), distances)
-# draw a line at y=0
+# plt.xticks(np.arange(len(distances)), distances)
 plt.axhline(0, color='black', linewidth=0.5, linestyle='dotted')
-
 plt.xlabel('Control group distance from Western Line (km)')
 plt.ylabel('Coefficient')
 plt.title('Regression Coefficients and 95% Confidence Intervals')
 plt.grid(True)
-plt.show()
+plt.savefig(results_folder / 'coefficients_plot.png')  # save the plot as a .png file
 
-
-# Great, I am going to give you the whole script, and I want you to refactor it so that the parameters like distances and whether or not to exclude the parishes touching 
+# regression results to excel
+results_df.to_excel(results_folder / 'regression_results.xlsx', index=False)
