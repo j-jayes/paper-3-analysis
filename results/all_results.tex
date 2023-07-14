@@ -1,38 +1,30 @@
-\begin{tabular}{llllrrrrrll}
+\begin{tabular}{llllllrrrrrrrl}
 \toprule
-Distance & Exclude_Touching & Source_Type & Outcome_Var & Coefficient & CI_lower & CI_upper & P-value & F-statistic & Include area & Results File \\
+Distance & Source_Type & Outcome_Var & Exclude_Touching & Include_area & Include_population & Coefficient & CI_lower & CI_upper & P-value & F-statistic & n_observations & R-squared & Results File \\
 \midrule
-100 & True & transmitted & num_power_stations & 1.966532 & 1.480802 & 2.452263 & 0.000000 & 63.145652 & False & results\regression_results.xlsx \\
-150 & True & transmitted & num_power_stations & 1.969138 & 1.477299 & 2.460978 & 0.000000 & 61.694272 & False & results\regression_results.xlsx \\
-200 & True & transmitted & num_power_stations & 1.973988 & 1.494467 & 2.453509 & 0.000000 & 65.208576 & False & results\regression_results.xlsx \\
-250 & True & transmitted & num_power_stations & 1.964394 & 1.504221 & 2.424566 & 0.000000 & 70.107997 & False & results\regression_results.xlsx \\
-100 & False & transmitted & num_power_stations & 1.780217 & 1.145406 & 2.415028 & 0.000000 & 30.270026 & False & results\regression_results.xlsx \\
-150 & False & transmitted & num_power_stations & 1.830787 & 1.227418 & 2.434156 & 0.000000 & 35.420534 & False & results\regression_results.xlsx \\
-200 & False & transmitted & num_power_stations & 1.849604 & 1.265210 & 2.433997 & 0.000000 & 38.532326 & False & results\regression_results.xlsx \\
-250 & False & transmitted & num_power_stations & 1.853328 & 1.290581 & 2.416076 & 0.000000 & 41.716306 & False & results\regression_results.xlsx \\
-100 & True & transmitted & num_power_stations & 1.879382 & 1.399831 & 2.358934 & 0.000000 & 46.134226 & True & results\regression_results.xlsx \\
-150 & True & transmitted & num_power_stations & 1.928251 & 1.438507 & 2.417996 & 0.000000 & 38.217754 & True & results\regression_results.xlsx \\
-200 & True & transmitted & num_power_stations & 1.965695 & 1.487393 & 2.443997 & 0.000000 & 37.027378 & True & results\regression_results.xlsx \\
-250 & True & transmitted & num_power_stations & 1.963060 & 1.504135 & 2.421984 & 0.000000 & 40.115423 & True & results\regression_results.xlsx \\
-100 & False & transmitted & num_power_stations & 1.651212 & 1.030040 & 2.272385 & 0.000000 & 45.326190 & True & results\regression_results.xlsx \\
-150 & False & transmitted & num_power_stations & 1.756854 & 1.160265 & 2.353443 & 0.000000 & 38.368780 & True & results\regression_results.xlsx \\
-200 & False & transmitted & num_power_stations & 1.828857 & 1.248140 & 2.409574 & 0.000000 & 31.665324 & True & results\regression_results.xlsx \\
-250 & False & transmitted & num_power_stations & 1.845073 & 1.285524 & 2.404622 & 0.000000 & 32.967147 & True & results\regression_results.xlsx \\
-100 & True & water & amount_final & 6309.698726 & 4536.888041 & 8082.509410 & 0.000000 & 48.809069 & False & results\regression_results.xlsx \\
-150 & True & water & amount_final & 6301.366415 & 4821.056134 & 7781.676696 & 0.000000 & 69.749022 & False & results\regression_results.xlsx \\
-200 & True & water & amount_final & 6326.209364 & 4952.645831 & 7699.772897 & 0.000000 & 81.629340 & False & results\regression_results.xlsx \\
-250 & True & water & amount_final & 6335.743457 & 5040.600438 & 7630.886477 & 0.000000 & 92.072986 & False & results\regression_results.xlsx \\
-100 & False & water & amount_final & 6021.682175 & 3962.364932 & 8080.999418 & 0.000000 & 32.913988 & False & results\regression_results.xlsx \\
-150 & False & water & amount_final & 6090.532016 & 4291.272290 & 7889.791742 & 0.000000 & 44.084749 & False & results\regression_results.xlsx \\
-200 & False & water & amount_final & 6132.837058 & 4433.873307 & 7831.800808 & 0.000000 & 50.124460 & False & results\regression_results.xlsx \\
-250 & False & water & amount_final & 6158.213188 & 4537.286765 & 7779.139610 & 0.000000 & 55.516805 & False & results\regression_results.xlsx \\
-100 & True & NaN & amount_final & 2630.552218 & 1431.764741 & 3829.339695 & 0.000018 & 18.548581 & False & results\regression_results.xlsx \\
-150 & True & NaN & amount_final & 2617.978824 & 1614.400855 & 3621.556794 & 0.000000 & 26.191178 & False & results\regression_results.xlsx \\
-200 & True & NaN & amount_final & 2643.243525 & 1711.889585 & 3574.597466 & 0.000000 & 30.993053 & False & results\regression_results.xlsx \\
-250 & True & NaN & amount_final & 2595.370564 & 1699.234131 & 3491.506997 & 0.000000 & 32.269591 & False & results\regression_results.xlsx \\
-100 & False & NaN & amount_final & 2343.161234 & 966.034370 & 3720.288098 & 0.000868 & 11.142863 & False & results\regression_results.xlsx \\
-150 & False & NaN & amount_final & 2408.648911 & 1203.410469 & 3613.887354 & 0.000092 & 15.365182 & False & results\regression_results.xlsx \\
-200 & False & NaN & amount_final & 2451.119896 & 1312.973841 & 3589.265950 & 0.000025 & 17.840413 & False & results\regression_results.xlsx \\
-250 & False & NaN & amount_final & 2430.394603 & 1333.035495 & 3527.753712 & 0.000015 & 18.865933 & False & results\regression_results.xlsx \\
+100 & transmitted & num_power_stations & True & True & False & 0.355177 & -0.266756 & 0.977111 & 0.262721 & 13.435780 & 1074.000000 & 0.024476 & results\regression_results.xlsx \\
+150 & transmitted & num_power_stations & True & True & False & 0.577272 & 0.034655 & 1.119890 & 0.037073 & 11.977226 & 1497.000000 & 0.015781 & results\regression_results.xlsx \\
+200 & transmitted & num_power_stations & True & True & False & 0.620032 & 0.085615 & 1.154450 & 0.022996 & 9.024367 & 1693.000000 & 0.010567 & results\regression_results.xlsx \\
+250 & transmitted & num_power_stations & True & True & False & 0.636884 & 0.126809 & 1.146958 & 0.014424 & 9.506045 & 1877.000000 & 0.010043 & results\regression_results.xlsx \\
+100 & transmitted & num_power_stations & True & True & True & 0.268464 & -0.350508 & 0.887436 & 0.394930 & 17.293115 & 1065.000000 & 0.046617 & results\regression_results.xlsx \\
+150 & transmitted & num_power_stations & True & True & True & 0.557659 & 0.015315 & 1.100003 & 0.043880 & 15.634907 & 1479.000000 & 0.030820 & results\regression_results.xlsx \\
+200 & transmitted & num_power_stations & True & True & True & 0.588709 & 0.054861 & 1.122557 & 0.030687 & 15.466163 & 1672.000000 & 0.027064 & results\regression_results.xlsx \\
+250 & transmitted & num_power_stations & True & True & True & 0.609858 & 0.100038 & 1.119679 & 0.019077 & 16.114848 & 1853.000000 & 0.025480 & results\regression_results.xlsx \\
+100 & water & num_power_stations & True & True & False & 0.720108 & 0.101574 & 1.338642 & 0.022543 & 107.331436 & 1074.000000 & 0.166967 & results\regression_results.xlsx \\
+150 & water & num_power_stations & True & True & False & 0.724742 & 0.115763 & 1.333720 & 0.019705 & 98.144106 & 1497.000000 & 0.116127 & results\regression_results.xlsx \\
+200 & water & num_power_stations & True & True & False & 0.788099 & 0.192312 & 1.383886 & 0.009556 & 71.262872 & 1693.000000 & 0.077776 & results\regression_results.xlsx \\
+250 & water & num_power_stations & True & True & False & 0.865280 & 0.297402 & 1.433158 & 0.002841 & 71.093363 & 1877.000000 & 0.070523 & results\regression_results.xlsx \\
+100 & water & num_power_stations & True & True & True & 0.696235 & 0.073866 & 1.318604 & 0.028373 & 71.470074 & 1065.000000 & 0.168111 & results\regression_results.xlsx \\
+150 & water & num_power_stations & True & True & True & 0.715084 & 0.102868 & 1.327301 & 0.022094 & 66.825760 & 1479.000000 & 0.119654 & results\regression_results.xlsx \\
+200 & water & num_power_stations & True & True & True & 0.764648 & 0.166327 & 1.362968 & 0.012283 & 50.698960 & 1672.000000 & 0.083565 & results\regression_results.xlsx \\
+250 & water & num_power_stations & True & True & True & 0.845922 & 0.275512 & 1.416332 & 0.003674 & 50.754648 & 1853.000000 & 0.076084 & results\regression_results.xlsx \\
+100 & NaN & num_power_stations & True & True & False & 1.159500 & 0.100767 & 2.218232 & 0.031863 & 67.402316 & 1074.000000 & 0.111796 & results\regression_results.xlsx \\
+150 & NaN & num_power_stations & True & True & False & 1.376993 & 0.382244 & 2.371742 & 0.006698 & 63.190574 & 1497.000000 & 0.077995 & results\regression_results.xlsx \\
+200 & NaN & num_power_stations & True & True & False & 1.484494 & 0.506547 & 2.462442 & 0.002949 & 45.774328 & 1693.000000 & 0.051387 & results\regression_results.xlsx \\
+250 & NaN & num_power_stations & True & True & False & 1.581926 & 0.648902 & 2.514950 & 0.000900 & 46.214909 & 1877.000000 & 0.047004 & results\regression_results.xlsx \\
+100 & NaN & num_power_stations & True & True & True & 1.041203 & -0.016991 & 2.099397 & 0.053787 & 50.275701 & 1065.000000 & 0.124463 & results\regression_results.xlsx \\
+150 & NaN & num_power_stations & True & True & True & 1.345819 & 0.350448 & 2.341189 & 0.008083 & 48.593436 & 1479.000000 & 0.089945 & results\regression_results.xlsx \\
+200 & NaN & num_power_stations & True & True & True & 1.426769 & 0.449586 & 2.403953 & 0.004238 & 39.612489 & 1672.000000 & 0.066507 & results\regression_results.xlsx \\
+250 & NaN & num_power_stations & True & True & True & 1.533056 & 0.600305 & 2.465806 & 0.001288 & 40.278024 & 1853.000000 & 0.061342 & results\regression_results.xlsx \\
 \bottomrule
 \end{tabular}

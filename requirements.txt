@@ -4,3 +4,4 @@ shapely
 matplotlib 
 statsmodels
 openpyxl
+lxml

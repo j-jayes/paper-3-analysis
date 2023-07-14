@@ -1,4 +1,4 @@
-def run_analysis(distances, source_type, outcome_var, exclude_touching, include_area, include_population):
+def run_analysis(distances, exclude_touching, source_type, outcome_var, include_area):
     """
     Run an analysis based on given parameters.
 
@@ -14,8 +14,6 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
         Outcome variable for regression. Can be 'amount_final' or 'num_power_stations'.
     include_area : bool
         Whether to include parish area as a control variable.
-    include_population : bool
-        Whether to include parish population as a control variable.
 
     Returns
     -------
@@ -32,19 +30,16 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
     import os
     import numpy as np
     import matplotlib.pyplot as plt
-    import itertools
     
     # Reading Excel Sheet
-    power_stations_path = pathlib.Path('data/power-stations/power-stations.xlsx')
-    power_stations_df = pd.read_excel(power_stations_path)
+    power_stations_df = pd.read_excel(pathlib.Path('data/power-stations/power-stations.xlsx'))
 
     # Filter based on source type
     if source_type is not None:
         power_stations_df = power_stations_df[power_stations_df['source_final'] == source_type]
 
     # Reading shapefile
-    parishes_path = pathlib.Path('data/maps/Swedish_parishes_1926.shp')
-    parishes = gpd.read_file(parishes_path)
+    parishes = gpd.read_file(pathlib.Path('data/maps/Swedish_parishes_1926.shp'))
 
     # Create a new GeoDataFrame
     geometry = [Point(xy) for xy in zip(power_stations_df['longitude'], power_stations_df['latitude'])]
@@ -60,28 +55,11 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
     # Convert CRS back to latitude and longitude
     parishes = parishes.to_crs('EPSG:4326')
 
-    # Load population data
-    population_df = pd.read_excel(pathlib.Path('data/parishes/population_by_parish_1900_1910.xlsx'))
-    # filter year == 1900
-    population_df = population_df[population_df['year'] == 1910]
-    # Rename 'n' to 'population_1930'
-    population_df = population_df.rename(columns={'n': 'population_1930'})
-    # Create a new column called ref_code_short by removing the last 3 characters from ref_code
-    population_df['ref_code_short'] = population_df['ref_code'].apply(lambda x: x[:-3])
-    # drop ref_code column
-    population_df = population_df.drop(columns=['ref_code'])
-    # do the same for parishes
-    parishes['ref_code_short'] = parishes['ref_code'].apply(lambda x: x[:-3])
-    # Merge population_1930 to parishes
-    parishes = parishes.merge(population_df, on='ref_code_short', how='left')
 
     # Spatial join
     stations_with_parish = gpd.sjoin(geo_power_stations, parishes, how='left', op='within')
     num_power_stations = stations_with_parish.groupby('ref_code').size().reset_index(name='num_power_stations')
 
-
-    # olidan coords: 12.272571287279908, 58.27550603306433
-    # älvkarleby coords: 17.443262677788724, 60.5633613884066
     # Create points
     station1_coords = (12.272571287279908, 58.27550603306433)
     station2_coords = (17.443262677788724, 60.5633613884066)
@@ -103,7 +81,9 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
 
     # select only parish_name, parish_name_lower and ref_code
     treated_parishes = treated_parishes[['parish_name', 'parish_name_lower', 'ref_code']]
-    # merge treated_parishes with parishes
+
+
+    # treated_parishes = treated_parishes.to_crs(parishes.crs)
     parishes = parishes.merge(treated_parishes[['ref_code']], on='ref_code', how='left', indicator='treatment')
     parishes['treatment'] = parishes['treatment'].map({'both': 'treated', 'left_only': 'control'})
 
@@ -118,8 +98,7 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
     # Add these data to "parishes" and "control_parishes"
     parishes = parishes.merge(total_power, on='ref_code', how='left')
     parishes = parishes.merge(num_power_stations, on='ref_code', how='left')
-
-    # in parishes, replace NaN with 0 in the outcome variables
+    # Replace NaN with 0 in the outcome variables
     parishes['amount_final'] = parishes['amount_final'].fillna(0)
     parishes['num_power_stations'] = parishes['num_power_stations'].fillna(0)
     parishes['area_sqkm'] = parishes['area_sqkm'].fillna(0)
@@ -133,6 +112,10 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
     for distance in distances:
         control_parishes[distance]['treatment'] = 0
 
+    parishes_with_treatment = parishes[parishes['treatment'] == 'treated']
+    # code treatment as 1
+    parishes_with_treatment['treatment'] = 1
+
     # Find all parishes that touch a treated parish
     if exclude_touching:
         touching_parishes = gpd.overlay(parishes, treated_parishes_geometry, how='intersection', keep_geom_type=False)
@@ -144,31 +127,16 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
             control_parishes[distance] = control_parishes[distance][~control_parishes[distance]['ref_code'].isin(touching_parishes['ref_code'])]
 
     # Create a DataFrame to store results
-    results_df = pd.DataFrame(columns=['Distance', 'Source_Type', 'Outcome_Var', 'Exclude_Touching', 'Include_area', 'Include_population', 'Coefficient', 'CI_lower', 'CI_upper', 'P-value', 'F-statistic', 'n_observations', 'R-squared'])
-
-    parishes_with_treatment = parishes[parishes['treatment'] == 'treated']
-    # code treatment as 1
-    parishes_with_treatment['treatment'] = 1
+    results_df = pd.DataFrame(columns=['Distance', 'Exclude_Touching', 'Source_Type', 'Outcome_Var', 'Coefficient', 'CI_lower', 'CI_upper', 'P-value', 'F-statistic'])
 
     results_folder = pathlib.Path('results')
     results_folder.mkdir(exist_ok=True)  # create the results folder if it doesn't already exist
 
-    # Conduct regression
     for distance in distances:
         data = pd.concat([parishes_with_treatment, control_parishes[distance]])
 
-        # drop column geometry from data
-        data = data.drop(columns=['geometry'])
-        file_name_out = f"data/stata/first_stage/distance_{distance}_source_{source_type}_outcome_{outcome_var}_exclude_touching_{exclude_touching}_area_{include_area}_population_{include_population}.dta"
-        
-        data.to_stata(file_name_out, write_index=False)
-
-        if include_area and include_population:
-            model = ols(f"{outcome_var} ~ treatment + area_sqkm + population_1930", data=data).fit()
-        elif include_area:
+        if include_area:
             model = ols(f"{outcome_var} ~ treatment + area_sqkm", data=data).fit()
-        elif include_population:
-            model = ols(f"{outcome_var} ~ treatment + population_1930", data=data).fit()
         else:
             model = ols(f"{outcome_var} ~ treatment", data=data).fit()
 
@@ -176,73 +144,31 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
         ci_lower, ci_upper = model.conf_int().loc['treatment']
         p_value = model.pvalues['treatment']
         f_stat = model.fvalue
-        n_observations = model.nobs
-        r_squared = model.rsquared
-        new_row = pd.DataFrame({'Distance': [distance], 'Source_Type': [source_type], 'Outcome_Var': [outcome_var], 'Exclude_Touching': [exclude_touching], 'Include_area': [include_area], 'Include_population': [include_population], 'Coefficient': [coef], 'CI_lower': [ci_lower], 'CI_upper': [ci_upper], 'P-value': [p_value], 'F-statistic': [f_stat], 'n_observations': [n_observations], 'R-squared': [r_squared]})
+        new_row = pd.DataFrame({'Distance': [distance], 'Exclude_Touching': [exclude_touching], 'Source_Type': [source_type], 'Outcome_Var': [outcome_var], "Include area": [include_area], 'Coefficient': [coef], 'CI_lower': [ci_lower], 'CI_upper': [ci_upper], 'P-value': [p_value], 'F-statistic': [f_stat]})
         results_df = pd.concat([results_df, new_row], ignore_index=True)
-        # Generate map
-        fig, ax = plt.subplots(figsize=(10, 10))
-        ax.set_aspect('equal')
-        
-        # plot parishes
-        parishes.boundary.plot(ax=ax, color='black', linewidth=0.5)
-        
-        # plot control group
-        control_parishes[distance].plot(ax=ax, color='blue', alpha=0.5)
-        
-        # plot treatment group
-        parishes_with_treatment.plot(ax=ax, color='red', alpha=0.5)
-        
-        plt.title(f'Treatment and Control Groups (Control Distance {distance} km)')
-        plt.axis('off')
-        
-        plt.savefig(results_folder / f'groups_map_{distance}km.png', bbox_inches='tight')
-
-        plt.close()
-
-
-    # Save the coefficient plot and table
-
-    plt.figure(figsize=(10, 6))
-    plt.errorbar(x='Distance', y='Coefficient', yerr=[results_df['Coefficient'] - results_df['CI_lower'], results_df['CI_upper'] - results_df['Coefficient']], data=results_df, fmt='o')
-    # plt.xticks(np.arange(len(distances)), distances)
-    plt.axhline(0, color='black', linewidth=0.5, linestyle='dotted')
-    plt.xlabel('Control group distance from Western Line (km)')
-    plt.ylabel('Coefficient')
-    plt.title('Regression Coefficients and 95% Confidence Intervals')
-    plt.grid(True)
-    plt.savefig(results_folder / 'coefficients_plot.png')  # save the plot as a .png file
 
     results_filename = results_folder / 'regression_results.xlsx'
     results_df.to_excel(results_filename, index=False)
     return results_df, results_filename
 
-# List all possible options for each parameter
-#exclude_touching_options = [True, False]
-#outcome_var_options = ['amount_final', 'num_power_stations']
-#source_type_options = ['transmitted', 'water', None]
-#include_area_options = [True, False]
-#include_population_options = [True, False]
-
-exclude_touching_options = [True]
-outcome_var_options = ['num_power_stations']
-source_type_options = ['transmitted', 'water', None]
-include_area_options = [True]
-include_population_options = [False, True]
-
-# Generate all combinations
-all_combinations = list(itertools.product(exclude_touching_options, outcome_var_options, source_type_options, include_area_options, include_population_options))
-
-# Create list of parameters
-params = [([100, 150, 200, 250], comb[2], comb[1], comb[0], comb[3], comb[4]) for comb in all_combinations]
-
-print(params)
+# Call function
+params = [
+    ([100, 150, 200, 250], True, "transmitted", "num_power_stations", False),
+    ([100, 150, 200, 250], False, "transmitted", "num_power_stations", False),
+    ([100, 150, 200, 250], True, "transmitted", "num_power_stations", True),
+    ([100, 150, 200, 250], False, "transmitted", "num_power_stations", True),
+    ([100, 150, 200, 250], True, "water", "amount_final", False),
+    ([100, 150, 200, 250], False, "water", "amount_final", False),
+    ([100, 150, 200, 250], True, None, "amount_final", False),
+    ([100, 150, 200, 250], False, None, "amount_final", False),
+    # add more parameter combinations as needed
+]
 
 all_results = []
 
 for param in params:
-    distances, source_type, outcome_var, exclude_touching, include_area, include_population = param
-    df, filename = run_analysis(distances, source_type, outcome_var, exclude_touching, include_area, include_population)
+    distances, exclude_touching, source_type, outcome_var, include_area = param
+    df, filename = run_analysis(distances, exclude_touching, source_type, outcome_var, include_area)
     df["Results File"] = filename
     all_results.append(df)
 
@@ -257,3 +183,13 @@ latex_table = all_results_df.to_latex(index=False)
 # Save to .tex file
 with open("results/all_results.tex", "w") as f:
     f.write(latex_table)
+
+
+
+# data = pd.concat([parishes_with_treatment, control_parishes[250]])
+ # scatterplot with regression line. x-axis has area_sqkm, y-axis has num_power_stations
+# import seaborn as sns
+# plot = sns.regplot(x='area_sqkm', y='num_power_stations', data=data)
+
+# display plot
+# plt.show()

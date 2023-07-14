@@ -1,0 +1,14 @@
+	(1)
+VARIABLES	amount_final
+	
+treatment	1,482***
+	(433.5)
+area_sqkm	4.414***
+	(1.260)
+Constant	86.32
+	(235.8)
+	
+Observations	1,074
+R-squared	0.023
+Standard errors in parentheses	
+*** p<0.01, ** p<0.05, * p<0.1	

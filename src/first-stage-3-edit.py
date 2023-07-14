@@ -1,3 +1,15 @@
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point, LineString
+from statsmodels.formula.api import ols
+import pathlib
+import openpyxl
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import itertools
+
+
 def run_analysis(distances, source_type, outcome_var, exclude_touching, include_area, include_population):
     """
     Run an analysis based on given parameters.
@@ -22,18 +34,6 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
     results_df : DataFrame
         DataFrame containing the regression results.
     """
-
-    import pandas as pd
-    import geopandas as gpd
-    from shapely.geometry import Point, LineString
-    from statsmodels.formula.api import ols
-    import pathlib
-    import openpyxl
-    import os
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import itertools
-    
     # Reading Excel Sheet
     power_stations_path = pathlib.Path('data/power-stations/power-stations.xlsx')
     power_stations_df = pd.read_excel(power_stations_path)
@@ -61,9 +61,9 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
     parishes = parishes.to_crs('EPSG:4326')
 
     # Load population data
-    population_df = pd.read_excel(pathlib.Path('data/parishes/population_by_parish_1900_1910.xlsx'))
+    population_df = pd.read_excel(pathlib.Path('data/parishes/population_by_parish_1930.xlsx'))
     # filter year == 1900
-    population_df = population_df[population_df['year'] == 1910]
+    # population_df = population_df[population_df['year'] == 1910]
     # Rename 'n' to 'population_1930'
     population_df = population_df.rename(columns={'n': 'population_1930'})
     # Create a new column called ref_code_short by removing the last 3 characters from ref_code
@@ -157,11 +157,10 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
     for distance in distances:
         data = pd.concat([parishes_with_treatment, control_parishes[distance]])
 
-        # drop column geometry from data
-        data = data.drop(columns=['geometry'])
-        file_name_out = f"data/stata/first_stage/distance_{distance}_source_{source_type}_outcome_{outcome_var}_exclude_touching_{exclude_touching}_area_{include_area}_population_{include_population}.dta"
-        
+        # export data as stata .dta file with the paramaters in the file name
+        file_name_out = f"data/stata/first_stage/distance_{distance}_source_{source_type}_outcome_{outcome_var}_exclude_{exclude_touching}_area_{include_area}_population_{include_population}.dta"
         data.to_stata(file_name_out, write_index=False)
+
 
         if include_area and include_population:
             model = ols(f"{outcome_var} ~ treatment + area_sqkm + population_1930", data=data).fit()
@@ -226,8 +225,8 @@ def run_analysis(distances, source_type, outcome_var, exclude_touching, include_
 
 exclude_touching_options = [True]
 outcome_var_options = ['num_power_stations']
-source_type_options = ['transmitted', 'water', None]
-include_area_options = [True]
+source_type_options = ['transmitted']
+include_area_options = [True, False]
 include_population_options = [False, True]
 
 # Generate all combinations
@@ -252,8 +251,8 @@ all_results_df = pd.concat(all_results)
 all_results_df.to_excel("results/all_results.xlsx", index=False)
 
 # Generate LaTeX table
-latex_table = all_results_df.to_latex(index=False)
+# latex_table = all_results_df.to_latex(index=False)
 
 # Save to .tex file
-with open("results/all_results.tex", "w") as f:
-    f.write(latex_table)
+# with open("results/all_results.tex", "w") as f:
+#    f.write(latex_table)
