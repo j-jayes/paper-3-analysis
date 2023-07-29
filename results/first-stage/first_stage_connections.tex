@@ -1,0 +1,24 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+                    &\multicolumn{1}{c}{(1)}         &\multicolumn{1}{c}{(2)}         &\multicolumn{1}{c}{(3)}         \\
+                    &Total connections         &N. transformers         &N. generators (water, steam, diesel)         \\
+\hline
+Treated parishes    &       4.386\sym{***}&       4.480\sym{***}&      -0.094\sym{***}\\
+                    &      (0.48)         &      (0.48)         &      (0.02)         \\
+Parish area in square kilometers&       0.000\sym{***}&       0.000\sym{***}&       0.000         \\
+                    &      (0.00)         &      (0.00)         &      (0.00)         \\
+Parish population in 1900&       0.000\sym{***}&       0.000\sym{***}&       0.000\sym{***}\\
+                    &      (0.00)         &      (0.00)         &      (0.00)         \\
+Constant            &      -0.470\sym{**} &      -0.532\sym{***}&       0.062\sym{***}\\
+                    &      (0.14)         &      (0.14)         &      (0.01)         \\
+\hline
+R-squared           &        0.26         &        0.27         &        0.02         \\
+Observations        &        2275         &        2275         &        2275         \\
+F-stat              &      61.525         &      61.283         &           .         \\
+Mean Dependent Var  &        1.82         &        1.73         &        0.09         \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Robust standard errors in parentheses}\\
+\end{tabular}
+}
