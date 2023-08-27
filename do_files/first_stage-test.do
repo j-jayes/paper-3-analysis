@@ -1,12 +1,16 @@
 clear all
 set more off 
+
+* declare the local parameter
+local distance_cutoff = 300
+
 cd "C:\Users\User\Documents\Recon\paper-3-analysis"
+
 * read in data from "data/first-stage/parish-level-power-station-data.xlsx"
-import excel "data/first-stage/parish-level-power-station-data-vf.xlsx", sheet("Sheet1") firstrow clear
+import excel "data/first-stage/parish-level-power-station-data-vf-copy.xlsx", sheet("Sheet1") firstrow clear
 
 *** results directory "results/first-stage/" as a local
 local results_dir "results/first-stage/"
-
 
 *** label vars
 
@@ -16,21 +20,21 @@ label var population_1900 "Parish population in 1900"
 
 *** Regression for total power
 
-quietly summarize total_power if distance_to_line < 300
+quietly summarize total_power if distance_to_line < `distance_cutoff'
 local mean1 = round(r(mean), 0.01)
-reg total_power treated area population_1900 if distance_to_line < 300, robust
+reg total_power treated area population_1900 if distance_to_line < `distance_cutoff', robust
 eststo Model1
 estadd scalar mean_depvar = `mean1'
 
-quietly summarize total_power_transmitted if distance_to_line < 300
+quietly summarize total_power_transmitted if distance_to_line < `distance_cutoff'
 local mean2 = round(r(mean), 0.01)
-reg total_power_transmitted treated area population_1900 if distance_to_line < 300, robust
+reg total_power_transmitted treated area population_1900 if distance_to_line < `distance_cutoff', robust
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-quietly summarize total_power_generated if distance_to_line < 300
+quietly summarize total_power_generated if distance_to_line < `distance_cutoff'
 local mean3 = round(r(mean), 0.01)
-reg total_power_generated treated area population_1900 if distance_to_line < 300, robust
+reg total_power_generated treated area population_1900 if distance_to_line < `distance_cutoff', robust
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -45,21 +49,21 @@ esttab Model1 Model2 Model3 using `results_dir'/first_stage_power.tex, label rep
 eststo clear
 
 
-quietly summarize total_connections if distance_to_line < 300
+quietly summarize total_connections if distance_to_line < `distance_cutoff'
 local mean1 = round(r(mean), 0.01)
-reg total_connections treated area population_1900 if distance_to_line < 300, robust
+reg total_connections treated area population_1900 if distance_to_line < `distance_cutoff', robust
 eststo Model1
 estadd scalar mean_depvar = `mean1'
 
-quietly summarize num_connections_transmitted if distance_to_line < 300
+quietly summarize num_connections_transmitted if distance_to_line < `distance_cutoff'
 local mean2 = round(r(mean), 0.01)
-reg num_connections_transmitted treated area population_1900 if distance_to_line < 300, robust
+reg num_connections_transmitted treated area population_1900 if distance_to_line < `distance_cutoff', robust
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-quietly summarize num_connections_generated if distance_to_line < 300
+quietly summarize num_connections_generated if distance_to_line < `distance_cutoff'
 local mean3 = round(r(mean), 0.01)
-reg num_connections_generated treated area population_1900 if distance_to_line < 300, robust
+reg num_connections_generated treated area population_1900 if distance_to_line < `distance_cutoff', robust
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
