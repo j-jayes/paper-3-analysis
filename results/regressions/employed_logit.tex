@@ -1,0 +1,46 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+                    &\multicolumn{1}{c}{Has occupation}&\multicolumn{1}{c}{Has occupation}&\multicolumn{1}{c}{Has occupation}\\
+                    &        b/se         &        b/se         &        b/se         \\
+\hline
+Has occupation      &                     &                     &                     \\
+Birth Parish (Treated)&      -0.022\sym{*}  &      -0.025\sym{*}  &       0.011         \\
+                    &      (0.01)         &      (0.01)         &      (0.01)         \\
+Age                 &                     &       0.262\sym{***}&       0.428\sym{***}\\
+                    &                     &      (0.00)         &      (0.00)         \\
+Age Squared         &                     &      -0.005\sym{***}&      -0.007\sym{***}\\
+                    &                     &      (0.00)         &      (0.00)         \\
+Female (1 = Yes 0 = No)&                     &      -2.248\sym{***}&      -2.360\sym{***}\\
+                    &                     &      (0.01)         &      (0.01)         \\
+Divorced            &                     &                     &       0.000         \\
+                    &                     &                     &         (.)         \\
+Married             &                     &                     &      -2.033\sym{***}\\
+                    &                     &                     &      (0.06)         \\
+Other               &                     &                     &      -0.616         \\
+                    &                     &                     &      (0.87)         \\
+Unmarried           &                     &                     &      -0.172\sym{**} \\
+                    &                     &                     &      (0.06)         \\
+Widow/Widower       &                     &                     &       0.409\sym{***}\\
+                    &                     &                     &      (0.08)         \\
+Literate            &                     &                     &       0.000         \\
+                    &                     &                     &         (.)         \\
+Post primary schooling&                     &                     &       1.580\sym{***}\\
+                    &                     &                     &      (0.15)         \\
+Post-secondary and university&                     &                     &       1.461\sym{***}\\
+                    &                     &                     &      (0.16)         \\
+Primary school      &                     &                     &       1.749\sym{***}\\
+                    &                     &                     &      (0.15)         \\
+Constant            &       0.530\sym{***}&      -1.494\sym{***}&      -5.410\sym{***}\\
+                    &      (0.00)         &      (0.05)         &      (0.17)         \\
+\hline
+R-squared           &                     &                     &                     \\
+Observations        &      770075         &      770075         &      770075         \\
+F-stat              &                     &                     &                     \\
+Mean Dependent Var  &        0.63         &        0.63         &        0.63         \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Robust standard errors in parentheses}\\
+\end{tabular}
+}

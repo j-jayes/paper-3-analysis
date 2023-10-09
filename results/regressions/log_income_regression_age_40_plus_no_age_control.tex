@@ -1,0 +1,61 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+                    &\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}\\
+                    &        b/se         &        b/se         &        b/se         \\
+\hline
+Birth Parish (Treated)=0 $\times$ age\_40\_plus=0&       0.000         &       0.000         &       0.000         \\
+                    &         (.)         &         (.)         &         (.)         \\
+Birth Parish (Treated)=0 $\times$ age\_40\_plus=1&      -0.776\sym{***}&      -0.799\sym{***}&      -0.786\sym{***}\\
+                    &      (0.01)         &      (0.01)         &      (0.01)         \\
+Birth Parish (Treated)=1 $\times$ age\_40\_plus=0&       0.337\sym{***}&       0.308\sym{***}&       0.248\sym{***}\\
+                    &      (0.01)         &      (0.01)         &      (0.01)         \\
+Birth Parish (Treated)=1 $\times$ age\_40\_plus=1&      -0.177\sym{***}&      -0.239\sym{***}&      -0.347\sym{***}\\
+                    &      (0.02)         &      (0.02)         &      (0.02)         \\
+Female (1 = Yes 0 = No)&                     &      -1.895\sym{***}&      -1.477\sym{***}\\
+                    &                     &      (0.01)         &      (0.01)         \\
+Divorced            &                     &                     &       0.000         \\
+                    &                     &                     &         (.)         \\
+Married             &                     &                     &       1.098\sym{***}\\
+                    &                     &                     &      (0.05)         \\
+Other               &                     &                     &      -0.583         \\
+                    &                     &                     &      (1.25)         \\
+Unmarried           &                     &                     &       0.244\sym{***}\\
+                    &                     &                     &      (0.05)         \\
+Widow/Widower       &                     &                     &      -0.784\sym{***}\\
+                    &                     &                     &      (0.05)         \\
+Literate            &                     &                     &       0.000         \\
+                    &                     &                     &         (.)         \\
+Post primary schooling&                     &                     &       3.031\sym{***}\\
+                    &                     &                     &      (0.04)         \\
+Post-secondary and university&                     &                     &       3.312\sym{***}\\
+                    &                     &                     &      (0.05)         \\
+Primary school      &                     &                     &       2.412\sym{***}\\
+                    &                     &                     &      (0.03)         \\
+Elite               &                     &                     &       0.000         \\
+                    &                     &                     &         (.)         \\
+Farmers and fishermen&                     &                     &      -1.531\sym{***}\\
+                    &                     &                     &      (0.03)         \\
+Foremen             &                     &                     &      -0.514\sym{***}\\
+                    &                     &                     &      (0.03)         \\
+Low-skilled workers &                     &                     &      -1.245\sym{***}\\
+                    &                     &                     &      (0.03)         \\
+Medium-skilled workers&                     &                     &      -0.863\sym{***}\\
+                    &                     &                     &      (0.03)         \\
+Unskilled workers   &                     &                     &      -1.641\sym{***}\\
+                    &                     &                     &      (0.03)         \\
+White collar        &                     &                     &      -0.082\sym{**} \\
+                    &                     &                     &      (0.03)         \\
+Constant            &       5.785\sym{***}&       6.382\sym{***}&       4.446\sym{***}\\
+                    &      (0.00)         &      (0.00)         &      (0.07)         \\
+\hline
+R-squared           &        0.02         &        0.10         &        0.18         \\
+Observations        &      812955         &      812955         &      812955         \\
+F-stat              &    4493.054         &   19555.632         &   11072.124         \\
+Mean Dependent Var  &        5.42         &        5.42         &        5.42         \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Robust standard errors in parentheses}\\
+\end{tabular}
+}

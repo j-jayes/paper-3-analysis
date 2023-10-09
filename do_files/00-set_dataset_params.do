@@ -26,9 +26,9 @@ label variable employed "Has occupation"
 
 *** set params
 
-local distance_cutoff = 300
+local distance_cutoff = 250
 local age_low = 15
-local age_high = 40
+local age_high = 100
 
 *** label vars
 

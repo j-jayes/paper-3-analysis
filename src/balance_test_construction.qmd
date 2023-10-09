@@ -1,0 +1,38 @@
+---
+title: "Untitled"
+format: html
+---
+
+## Purpose
+
+Join the treatment and outcome variables to the parishes to test for balance.
+
+### Read in data
+
+```{r}
+library(tidyverse)
+
+df <- readxl::read_excel(here::here("data", "balance-tests", "balance_tests_1900.xlsx"))
+
+first_stage <- readxl::read_excel(here::here("data", "first-stage", "parish-level-power-station-data-vf.xlsx")) %>% 
+  mutate(parish_code = str_remove(ref_code, "SE/"),
+         parish_code = as.numeric(parish_code))
+```
+
+### Join 
+
+```{r}
+df <- df %>% 
+  inner_join(first_stage)
+```
+
+
+```{r}
+df <- df %>% 
+  filter(distance_to_line <= 250) %>% 
+  select(parish_code, contains("shc"), llabforce, treated, touching_treated.1, total_power, total_connections) 
+
+df %>% 
+  write_csv(here::here("data", "balance-tests", "balance_tests_1900_with_outcomes_250.csv"))
+```
+

@@ -1,0 +1,55 @@
+---
+title: "Shocked by electricity: The impact of new technology on individuals and local labour markets"
+subtitle: "EHES Conference Vienna 2023"
+author: "Jonathan Jayes  - Lund University"
+title-slide-attributes:
+  data-background-image: "assets/preview.png"
+  data-background-size: "30%"
+  data-background-opacity: "0.6"
+format: 
+
+  revealjs:
+    code-overflow: wrap
+    width: 1600
+    height: 900
+    fig-align: center
+    default-image-extension: svg
+    footer: "[{{< fa house >}}](https://j-jayes.github.io/Data-Visualization-in-R-Lund/)"
+    slide-number: c
+    code-block-bg: true
+    code-block-border-left: "#31BAE9"
+favicon: html/favicon.ico
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+How do I want the map to be?
+
+First I show the map of Sweden
+
+Then I show the location of Olidan and Alvkarleby
+
+Then I show how the power lines expanded across the country.
+
+Then I show the locations of the power stations and transformers.
+
+Then I show the treated and control parishes, and calculate the first stage.
+
+Then I exclude parishes that have Olidan and Alvkarleby, and show still large effect.
+
+Finally I do first stage matching and show still large effect.
+
+Then onto results:
+
+- Employment
+
+- Income
+
+- Inequality
+
+Then onto mechanisms. 
+
+

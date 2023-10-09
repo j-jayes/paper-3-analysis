@@ -1,0 +1,114 @@
+---
+title: "Coefplot on treated by age"
+format: html
+---
+
+## Purpose
+
+There is concern about the age grouping in this paper.
+
+I want to create a plot of the coefficient of interest by slicing my sample up by age from 16 to 39.
+
+I have done the regressions in Stata, now I will make the figure in R.
+
+```{r}
+library(tidyverse)
+library(ggtext)
+theme_set(theme_light())
+
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+
+df <- read_csv("results/regressions/log_income_regression_age_15_40.csv")
+
+df %>%
+  janitor::clean_names() %>%
+  mutate(across(where(is.character), ~ str_replace(.x, "^=\"(.*)\"$", "\\1"))) %>%
+  filter(row_number() %in% c(3, 4)) %>%
+  mutate(across(-x, ~ parse_number(.x))) %>%
+  mutate(x = case_when(
+    x == "" ~ "SE",
+    TRUE ~ "Coefficient"
+  )) %>%
+  pivot_longer(-x, names_to = "age", values_to = "value") %>%
+  pivot_wider(names_from = x, values_from = value) %>%
+  mutate(
+    conf.low = Coefficient - 1.96 * SE,
+    conf.high = Coefficient + 1.96 * SE
+  ) %>%
+  mutate(
+    age = parse_number(age),
+    age = age + 15
+  ) %>%
+  ggplot(aes(age, Coefficient)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  geom_point(colour = "#1A9973", cex = 2) +
+  geom_hline(yintercept = 0, lty = 2) +
+  labs(
+    x = "Age in 1930",
+    y = "Coefficient on being treated\nin log income regression"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/coefplot-in-treated-by-age.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+
+
+```
+
+
+
+## Entire sample
+
+```{r}
+df <- read_csv("results/regressions/log_income_regression_age_16_69.csv")
+
+df %>%
+  janitor::clean_names() %>%
+  mutate(across(where(is.character), ~ str_replace(.x, "^=\"(.*)\"$", "\\1"))) %>%
+  filter(row_number() %in% c(3, 4)) %>%
+  mutate(across(-x, ~ parse_number(.x))) %>%
+  mutate(x = case_when(
+    x == "" ~ "SE",
+    TRUE ~ "Coefficient"
+  )) %>%
+  pivot_longer(-x, names_to = "age", values_to = "value") %>%
+  pivot_wider(names_from = x, values_from = value) %>%
+  mutate(
+    conf.low = Coefficient - 1.96 * SE,
+    conf.high = Coefficient + 1.96 * SE
+  ) %>%
+  mutate(
+    age = parse_number(age),
+    age = age + 15
+  ) %>%
+  ggplot(aes(age, Coefficient)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  labs(
+    x = "Age in 1930",
+    y = "Coefficient on being treated\nin log income regression"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+```
+
