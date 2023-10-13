@@ -27,14 +27,6 @@ egen marital = group(marital_status), label
 drop schooling_abb
 drop marital_status
 
-* Generate a squared term for age for potential quadratic regression specification
-gen age_2 = age^2
-
-* Create a binary employment variable based on the presence of hisclass_group_abb
-gen employed = 0 if missing(hisclass_group_abb)
-replace employed = 1 if employed == . 
-label variable employed "Has occupation"
-
 *---------------------------------------------------*
 * Parameter and Label Settings
 *---------------------------------------------------*
@@ -48,6 +40,8 @@ local age_high = 100
 label var id "ID"
 label var log_income "Log Income"
 label var log_wealth "Log Wealth"
+label var employed "Has occupation"
+label var occ_title_without_income "Has occupational title but no income"
 label var electricity_job_direct "Electricity in Job (Direct)"
 label var electricity_job_indirect "Electricity in Job (Indirect)"
 label var age "Age"
@@ -62,6 +56,7 @@ label var birth_parish_distance_to_line "Birth Parish Distance to Line"
 label var current_parish_distance_to_line "Current Parish Distance to Line"
 label var birth_parish_touching_treated "Birth Parish Touching Treated"
 label var current_parish_touching_treated "Current Parish Touching Treated"
+
 
 *---------------------------------------------------*
 * Data Cleaning and Trimming
@@ -79,6 +74,7 @@ local varlist = r(varlist)
 local varlist: subinstr local varlist "log_wealth" "", all
 local varlist: subinstr local varlist "hisclass_group_abb" "", all
 local varlist: subinstr local varlist "log_income" "", all
+local varlist: subinstr local varlist "occ_title_without_income" "", all
 
 * Create an indicator for any missing value across all variables
 egen anymissing = rmiss(`varlist')
