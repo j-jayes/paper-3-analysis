@@ -16,21 +16,21 @@ local results_dir "results/regressions/"
 *** Regression 1: employment as dependent variable.
 
 * Regression for electricity_job_direct with birth_parish_treated only
-quietly summarize electricity_job_direct if birth_parish_treated == 0
+quietly summarize electricity_job_direct
 local mean1 = round(r(mean), 0.01)
 reg electricity_job_direct birth_parish_treated, robust
 eststo Model1
 estadd scalar mean_depvar = `mean1'
 
 * Adding age and age squared and female
-quietly summarize electricity_job_direct if birth_parish_treated == 0
+quietly summarize electricity_job_direct
 local mean2 = round(r(mean), 0.01)
 reg electricity_job_direct birth_parish_treated age age_2 female, robust
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
 * Adding marital status and schooling
-quietly summarize electricity_job_direct if birth_parish_treated == 0
+quietly summarize electricity_job_direct
 local mean3 = round(r(mean), 0.01)
 reg electricity_job_direct birth_parish_treated age age_2 female i.marital i.schooling, robust
 eststo Model3
@@ -45,7 +45,7 @@ esttab Model1 Model2 Model3 using `results_dir'/electricity_job_direct_regressio
 ****** Probit
 
 * Regression for electricity_job_direct with birth_parish_treated only
-quietly summarize electricity_job_direct if birth_parish_treated == 0
+quietly summarize electricity_job_direct
 local mean1 = round(r(mean), 0.01)
 probit electricity_job_direct birth_parish_treated, robust
 eststo Model1
@@ -54,14 +54,14 @@ estadd scalar mean_depvar = `mean1'
 margins
 
 * Adding age and age squared and female
-quietly summarize electricity_job_direct if birth_parish_treated == 0
+quietly summarize electricity_job_direct
 local mean2 = round(r(mean), 0.01)
 probit electricity_job_direct birth_parish_treated age age_2 female, robust
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
 * Adding marital status and schooling
-quietly summarize electricity_job_direct if birth_parish_treated == 0
+quietly summarize electricity_job_direct
 local mean3 = round(r(mean), 0.01)
 probit electricity_job_direct birth_parish_treated age age_2 female i.marital i.schooling, robust
 eststo Model3
