@@ -1,0 +1,62 @@
+---
+title: "Popular movement density calculations"
+format: html
+---
+
+## purpose
+
+Calculate the density of popular unions in parishes in years 1900, 1910 and 1930.
+
+```{r}
+library(tidyverse)
+
+df <- readxl::read_excel(here::here("data", "parishes", "union_membership_and_treated_groups_merged.xlsx"), sheet = 2)
+
+df_2 <- df %>%
+  select(parish_code, type_of_organization, contains("population_"), contains("n_members_")) %>%
+  pivot_longer(-c(parish_code, type_of_organization, contains("population_"))) %>%
+  mutate(
+    year = str_remove(name, "n_members_"),
+    year = as.numeric(year)
+  ) %>%
+  mutate(year_group = case_when(
+    between(year, 1895, 1905) ~ 1900,
+    between(year, 1905, 1915) ~ 1910,
+    between(year, 1925, 1935) ~ 1930,
+    TRUE ~ 0
+  )) %>%
+  filter(year_group != 0) %>%
+  group_by(parish_code, type_of_organization, year_group) %>%
+  mutate(value = mean(value, na.rm = T)) %>%
+  ungroup()
+
+df_3 <- df_2 %>% 
+  select(-year, -name) %>% 
+  distinct() %>% 
+  pivot_wider(names_from = year_group, values_from = value, names_prefix = "popular_movement_density_") %>% 
+  mutate(across(contains("popular_movement_density_"), ~ replace_na(., 0)))
+
+df_4 <- df_3 %>% 
+  select(!contains("population")) %>% 
+  pivot_longer(-c(parish_code, type_of_organization)) %>% 
+  mutate(year = str_extract(name, "[0-9]+"),
+         name = str_remove(name, "_[0-9]+")) %>% 
+  select(-name) %>% 
+  mutate(type_year = str_c("popular_movement_density_", year, "_", type_of_organization)) %>% 
+  select(-year, -type_of_organization) %>% 
+  distinct() %>% 
+  pivot_wider(names_from = type_year, values_fill = 0)
+
+treated_info <- df %>%
+  select(parish_code, treated, touching_treated, distance_to_line) %>% 
+  distinct()
+
+df_4 %>% 
+  left_join(treated_info) %>%
+  write_excel_csv(here::here("data", "union-data", "union_density_treatment_and_control.csv"))
+  
+
+df %>% 
+  count(type_of_organization)
+```
+
