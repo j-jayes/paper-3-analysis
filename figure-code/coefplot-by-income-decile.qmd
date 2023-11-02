@@ -1,0 +1,84 @@
+---
+title: "Untitled"
+format: html
+---
+
+## Purpose
+
+
+
+```{r}
+library(tidyverse)
+theme_set(theme_light())
+
+# Create atheme_light()# Create a data frame for coefficients
+coefficients <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `1` = c(0.000, 0.000, -0.000),
+  `2` = c(0.488, 0.012, -0.005),
+  `3` = c(0.250, 0.008, -0.004),
+  `4` = c(0.164, 0.006, -0.003),
+  `5` = c(0.123, 0.005, -0.002),
+  `6` = c(0.093, 0.004, -0.002),
+  `7` = c(0.070, 0.004, -0.001),
+  `8` = c(0.040, 0.003, -0.001),
+  `9` = c(0.016, 0.003, -0.001)
+) %>% 
+  rename_with(-Variable, .fn = ~ str_replace(., "X", "decile_")) %>% 
+  rename_with(-Variable, .fn = ~ str_c(., "0")) %>% 
+  pivot_longer(-Variable, names_to = "decile", values_to = "coefficient") %>% 
+  mutate(decile = as.numeric(str_extract(decile, "\\d\\d")))
+
+# Create a data frame for standard errors
+standard_errors <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `1` = c(0.00791, 0.00006, 0.00012),
+  `2` = c(0.08279, 0.00087, 0.00143),
+  `3` = c(0.04783, 0.00075, 0.00094),
+  `4` = c(0.03563, 0.00067, 0.00090),
+  `5` = c(0.03425, 0.00049, 0.00074),
+  `6` = c(0.03417, 0.00045, 0.00085),
+  `7` = c(0.02889, 0.00038, 0.00075),
+  `8` = c(0.03547, 0.00050, 0.00090),
+  `9` = c(0.03168, 0.00044, 0.00075)
+) %>% 
+  rename_with(-Variable, .fn = ~ str_replace(., "X", "decile_")) %>% 
+  rename_with(-Variable, .fn = ~ str_c(., "0")) %>% 
+  pivot_longer(-Variable, names_to = "decile", values_to = "se") %>% 
+  mutate(decile = as.numeric(str_extract(decile, "\\d\\d")))
+
+
+df <- coefficients %>%
+  inner_join(standard_errors, by = c("Variable", "decile")) %>%
+  mutate(
+    Variable = case_when(
+      Variable == "Birth Parish (Treated) = 1" ~ "Treated",
+      Variable == "popular_movement_density_1900_FA" ~ "Union density 1900",
+      Variable == "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA" ~ "Treated X Union density 1900"
+    ),
+    Variable = fct_relevel(Variable, "Union density 1900"),
+    Variable = fct_relevel(Variable, "Treated")
+  )
+
+# Create the plot
+df %>%
+  ggplot(aes(decile, coefficient, group = Variable)) +
+  facet_wrap(~Variable, nrow = 3, scales = "free_y") +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_errorbar(aes(ymin = coefficient - 1.96 * se, ymax = coefficient + 1.96 * se), width = 2) +
+  geom_line() +
+  geom_point(aes(colour = Variable), show.legend = F, cex = 3) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient",
+    title = "Coefficients from quantile regression",
+    subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nNote that the scale on the y-axis is not the same.\nError bars show 95% CI"
+  )
+
+```
+
