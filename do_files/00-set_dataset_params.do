@@ -6,7 +6,27 @@ clear all
 set more off 
 
 * Setting the working directory
-cd "C:\Users\User\Documents\Recon\paper-3-analysis"
+* cd "C:\Users\User\Documents\Recon\paper-3-analysis"
+
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
+
+*---------------------------------------------------*
+* Initial Data Import
+*---------------------------------------------------*
+
+* Load the dataset for the 1930 census
+use "data/census/1930_census_regression_dataset.dta"
+
+*-----* Stata Dofile: Data Preparation for Paper-3-Analysis*
+*---------------------------------------------------*
+
+clear all
+set more off 
+
+* Setting the working directory
+* cd "C:\Users\User\Documents\Recon\paper-3-analysis"
+
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
 
 *---------------------------------------------------*
 * Initial Data Import
