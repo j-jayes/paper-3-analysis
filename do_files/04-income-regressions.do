@@ -53,6 +53,46 @@ esttab Model1 Model2 Model3 using `results_dir'/04_log-income-regression.tex, la
   addnotes("Robust standard errors in parentheses")
   
   
+  
+*-------------------------------------------------------------*
+* Quantile Regressions for log_income: Quantile regressions
+*-------------------------------------------------------------*
+eststo clear
+
+
+forvalues i = 0.1(0.1)0.9 {
+
+	di `i'
+
+	qreg2 log_income birth_parish_treated age ///
+	age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+	quantile(`i') cluster (birth_parish_ref_code)
+	
+	loc h = `i' * 10
+	
+	eststo Model`h'
+}
+
+qreg2 log_income birth_parish_treated##c.popular_movement_density_1900_FA age ///
+age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+quantile(.8) cluster (birth_parish_ref_code)
+	
+eststo Model8
+
+qreg2 log_income birth_parish_treated##c.popular_movement_density_1900_FA age ///
+age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+quantile(.9) cluster (birth_parish_ref_code)
+	
+eststo Model9
+
+
+* Tabulate the regression results and save them in TeX format
+esttab Model1 Model2 Model3 Model4 Model5 Model6 Model7 Model8 Model9 ///
+	using 0401-quantile_reg_log-income.tex, label replace ///
+    stats(r2 N F mean_depvar, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat" "Mean Dependent Var")) ///
+    cells(b(star fmt(3)) se(par fmt(5))) ///
+    addnotes("Robust standard errors in parentheses")
+  
 *-------------------------------------------------------------*
 * Quantile Regressions for log_income: Main Specification 
 *-------------------------------------------------------------*
