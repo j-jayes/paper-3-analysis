@@ -288,25 +288,26 @@ data_1910 <- process_year(coefficients_1910, standard_errors_1910, 1910)
 data_1930 <- process_year(coefficients_1930, standard_errors_1930, 1930)
 
 # Combine all the data
-all_year_data <- bind_rows(data_1900, data_1910, data_1930) %>%
-  mutate(
-    Variable = fct_relevel(Variable, "Union density"),
-    Variable = fct_relevel(Variable, "Treated"),
-    year = as.character(year)
-  )
+all_year_data <- bind_rows(data_1900, data_1910, data_1930) %>% 
+  mutate(    year = as.character(year))
 
 # Process baseline data
 baseline_data <- process_baseline(coefficients_baseline, standard_errors_baseline)
 
 # Combine all data
-all_data <- bind_rows(baseline_data, all_year_data)
+all_data <- bind_rows(baseline_data, all_year_data) %>%
+  mutate(
+    Variable = fct_relevel(Variable, "Union density"),
+    Variable = fct_relevel(Variable, "Treated")
+  )
 
 # Create a facet plot
 ggplot(all_data, aes(x = decile, y = coefficient, color = Variable)) +
-  geom_point() +
+  geom_point(cex = 2, alpha = .5) +
   geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
   facet_grid(year ~ .) +
   theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
   geom_hline(yintercept = 0, lty = 2) +
   scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
   labs(
