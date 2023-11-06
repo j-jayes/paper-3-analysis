@@ -14,7 +14,7 @@ drop if employed == 0
 
 
 *** results directory "results/regressions/" as a local
-local results_dir "results/margins/"
+local results_dir "results/marginal-effects/"
 
 
 * Model 1: 

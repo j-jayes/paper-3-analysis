@@ -58,11 +58,6 @@ esttab Model1 Model2 Model3 using `results_dir'/04_log-income-regression.tex, la
 *-------------------------------------------------------------*
 eststo clear
 
-qreg2 log_income birth_parish_treated##c.popular_movement_density_1900_FA age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
-quantile(.3) cluster (birth_parish_ref_code)
-
-
 forvalues i = 0.1(0.1)0.9 {
 
 	di `i'

@@ -1,0 +1,44 @@
+import pandas as pd
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+# Load the dataset
+file_path = 'data/census/1930_census_regression_dataset_params_set.dta'
+data = pd.read_stata(file_path)
+
+# Drop observations where employed is 0
+data = data[data['employed'] == 1]
+
+# Create dummy variables for the categorical variables
+data = pd.get_dummies(data, columns=['marital', 'schooling', 'hisclass_group_abb'], drop_first=True)
+
+# Convert column names to snake case and remove punctuation
+data.columns = data.columns.str.replace('[^0-9a-zA-Z_]+', '').str.replace('-', '_').str.replace(' ', '_').str.lower()
+
+# Take a 5% stratified sample of the dataset
+data_sample = data.groupby('birth_parish_ref_code').apply(lambda x: x.sample(frac=0.05, random_state=1)).reset_index(drop=True)
+
+# Print columns where it contains 'marital'
+print(data_sample.columns[data_sample.columns.str.startswith('marital_')])
+
+# Define the formula for the regression model
+formula = 'log_income ~ birth_parish_treated * popular_movement_density_1900_FA + age + age_2 + female + ' \
+          + ' + '.join(data_sample.columns[data_sample.columns.str.startswith('marital_')]) \
+          + ' + ' + ' + '.join(data_sample.columns[data_sample.columns.str.startswith('schooling_')]) \
+          + ' + ' + ' + '.join(data_sample.columns[data_sample.columns.str.startswith('hisclass_group_abb_')])
+
+
+
+# Fit a quantile regression model on the sample
+model_sample = smf.quantreg(formula, data_sample)
+result_sample = model_sample.fit(q=0.5)
+
+# Calculate cluster-robust standard errors on the sample
+clusters_sample = data_sample['birth_parish_ref_code']
+X_sample = data_sample.drop(columns=['log_income', 'birth_parish_ref_code'])
+X_sample = sm.add_constant(X_sample)
+rlm_model_sample = sm.RLM(data_sample['log_income'], X_sample, M=sm.robust.norms.HuberT())
+rlm_result_sample = rlm_model_sample.fit(cov='HAC', kernel='bartlett', groups=clusters_sample)
+
+# Print the summary of the regression results
+print(rlm_result_sample.summary())
