@@ -1,6 +1,8 @@
 ---
 title: "Coefplot on treated by age"
 format: html
+editor_options: 
+  chunk_output_type: console
 ---
 
 ## Purpose
@@ -14,6 +16,7 @@ I have done the regressions in Stata, now I will make the figure in R.
 ```{r}
 library(tidyverse)
 library(ggtext)
+library(showtext)
 theme_set(theme_light())
 
 font_add_google("IBM Plex Mono", "ibm")
@@ -112,3 +115,79 @@ df %>%
 
 ```
 
+
+
+
+
+```{r}
+# Load necessary libraries
+library(tibble)
+library(dplyr)
+library(ggplot2)
+
+# Define sample size
+N <- 644261
+
+library(tibble)
+library(ggplot2)
+
+# Create the tibble with coefficients, standard errors, and confidence intervals
+coefficient_data <- tibble(
+  term = rep("birth_parish_treated", 46),
+  estimate = c(
+    0.259, 0.263, 0.266, 0.270, 0.273, 0.277, 0.281, 0.284, 0.288, 0.291,
+    0.295, 0.298, 0.302, 0.305, 0.309, 0.312, 0.316, 0.320, 0.323, 0.327,
+    0.330, 0.334, 0.337, 0.341, 0.344, 0.348, 0.351, 0.355, 0.358, 0.362,
+    0.366, 0.369, 0.373, 0.376, 0.380, 0.383, 0.387, 0.390, 0.394, 0.397,
+    0.401, 0.405, 0.408, 0.412, 0.415, 0.419
+  ),
+  std_error = c(
+    2.59, 2.67, 2.76, 2.85, 2.94, 3.04, 3.13, 3.24, 3.34, 3.45,
+    3.56, 3.67, 3.78, 3.90, 4.02, 4.15, 4.27, 4.40, 4.53, 4.66,
+    4.79, 4.92, 5.06, 5.19, 5.32, 5.45, 5.57, 5.69, 5.81, 5.92,
+    6.03, 6.13, 6.22, 6.30, 6.38, 6.44, 6.50, 6.54, 6.58, 6.61,
+    6.62, 6.63, 6.63, 6.62, 6.60, 6.58
+  ),
+  conf.low = c(
+    0.0627, 0.0699, 0.0770, 0.0841, 0.0911, 0.0981, 0.105, 0.112, 0.119, 0.125,
+    0.132, 0.139, 0.145, 0.152, 0.158, 0.165, 0.171, 0.177, 0.183, 0.189,
+    0.195, 0.201, 0.206, 0.212, 0.217, 0.223, 0.228, 0.233, 0.237, 0.242,
+    0.247, 0.251, 0.255, 0.259, 0.263, 0.267, 0.270, 0.273, 0.277, 0.279,
+    0.282, 0.285, 0.287, 0.290, 0.292, 0.294
+  ),
+  conf.high = c(
+    0.456, 0.456, 0.456, 0.456, 0.456, 0.456, 0.456, 0.456, 0.457, 0.457,
+    0.457, 0.458, 0.458, 0.459, 0.459, 0.460, 0.461, 0.462, 0.463, 0.464,
+    0.465, 0.467, 0.468, 0.470, 0.471, 0.473, 0.475, 0.477, 0.480, 0.482,
+    0.485, 0.487, 0.490, 0.493, 0.497, 0.500, 0.504, 0.507, 0.511, 0.515,
+    0.520, 0.524, 0.529, 0.534, 0.538, 0.544
+  ),
+  age = 15:60
+)
+
+
+
+# Print the tibble to check
+print(coefficient_data)
+
+# Plot the coefficients with ggplot2
+ggplot(coefficient_data, aes(x = age, y = estimate)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  geom_point(colour = "#1A9973", cex = 2) +
+  geom_hline(yintercept = 0, lty = 2) +
+  theme_minimal() +
+  scale_x_continuous(breaks = c(15, 30, 45, 60)) +
+  labs(x = "Age", y = "Marginal effect of age on treated coefficient") +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+
+ggsave(filename = here::here("figures/coefplot-on-treated-by-age-15-60.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```

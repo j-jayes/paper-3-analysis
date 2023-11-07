@@ -45,7 +45,7 @@ local counter = 1
 
 * Loop to Obtain Coefficient for Interaction Term by Age
 * ------------------------------------------------------
-forvalues i = 15 / 60 {
+forvalues i = 15 / 18 {
     quietly reg log_income female i.marital i.schooling i.hisclass_group_abb ///
         c.age##c.birth_parish_treated, vce(cluster birth_parish_ref_code)
     quietly margins, dydx(birth_parish_treated) at(age = `i')  vce(unconditional) post coeflegend
@@ -66,4 +66,4 @@ forvalues i = 15 / 60 {
 
 * Export Regression Table to LaTeX
 * -------------------------------
-esttab using `results_dir'/05-income-regressions-age-check.tex , stats(ci_95_low ci_95_high) replace
+esttab using `results_dir'/05-income-regressions-age-check.tex , stats(wl_1 wl_2) replace
