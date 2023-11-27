@@ -6,7 +6,7 @@ clear all
 set more off 
 
 * Setting the working directory
-cd "C:\Users\User\Documents\Recon\paper-3-analysis"
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
 
 * Load the dataset that results from the 'set_dataset_params.do' script
 use "data/census/1930_census_regression_dataset_params_set.dta"

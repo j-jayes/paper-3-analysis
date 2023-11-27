@@ -1,0 +1,42 @@
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import pairwise_distances_argmin_min
+
+# Load the dataset (replace 'your_file_path.xlsx' with the path to your dataset)
+file_path = './data/balance-tests/joined_data_with_distances.xlsx'
+data = pd.read_excel(file_path)
+
+# Variables for propensity score calculation
+covariates = ['shc1', 'shc2', 'shc3', 'shc4', 'shc5', 'shc6', 'shc7', 'llabforce']
+
+# Create a dataframe for propensity score calculation
+propensity_data = data[covariates + ['treated']].dropna()
+
+# Logistic regression model for propensity score
+log_reg = LogisticRegression()
+log_reg.fit(propensity_data[covariates], propensity_data['treated'])
+
+# Calculate propensity scores
+propensity_data['propensity_score'] = log_reg.predict_proba(propensity_data[covariates])[:, 1]
+
+# Splitting the data into treated and control groups
+treated = propensity_data[propensity_data['treated'] == 1]
+control = propensity_data[propensity_data['treated'] == 0]
+
+# Match control parishes to treated parishes based on propensity scores
+matched_indices, _ = pairwise_distances_argmin_min(treated[['propensity_score']], control[['propensity_score']])
+matched_control = control.iloc[matched_indices]
+
+# Ensuring that the number of control parishes is not less than the number of treated parishes
+if len(matched_control) < len(treated):
+    additional_control_indices = control.index.difference(matched_control.index)
+    additional_control = control.loc[additional_control_indices].sample(n=len(treated) - len(matched_control), random_state=0)
+    matched_control = pd.concat([matched_control, additional_control])
+
+# Retrieve parish names and codes for the matched control group
+matched_control_parishes = data.loc[matched_control.index, ['parish_name_x', 'parish_code', 'county_id', 'year']]
+
+# Save the matched control parishes to a new file
+matched_control_parishes.to_csv('matched_control_parishes.csv', index=False)
+
+print("The list of matched control parishes has been saved to 'matched_control_parishes.csv'")

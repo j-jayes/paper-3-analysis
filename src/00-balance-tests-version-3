@@ -1,0 +1,85 @@
+import pandas as pd
+import numpy as np
+from scipy.stats import ttest_ind
+
+# Function to calculate the sum of squared differences for each control parish
+def calculate_differences(data, treatment_group, control_group, variables_of_interest):
+    treatment_means = treatment_group[variables_of_interest].mean()
+    differences = control_group[variables_of_interest] - treatment_means
+    squared_differences = differences.apply(lambda row: np.sum(row**2), axis=1)
+    return squared_differences
+
+# Function to iteratively remove control parishes and test for balance
+def iterative_removal_for_balance(data, years, variables_of_interest, distance_threshold, max_removals):
+    balanced_results = {}
+    for year in years:
+        data_year = data[data['year'] == year]
+        treated_group = data_year[data_year['treated'] == 1]
+        control_group = data_year[(data_year['treated'] == 0) & (data_year['distance_to_line'] < distance_threshold) & (data_year['touching_treated'] == 0)]
+
+        control_differences = calculate_differences(data_year, treated_group, control_group, variables_of_interest)
+        control_group = control_group.assign(differences=control_differences)
+        control_group_sorted = control_group.sort_values('differences', ascending=False)
+
+        for removal_count in range(1, len(control_group_sorted) + 1):
+            if removal_count > max_removals:
+                break
+
+            current_control_group = control_group_sorted.iloc[removal_count:]
+            balanced = True
+            for column in variables_of_interest:
+                treated_values = treated_group[column].dropna()
+                control_values = current_control_group[column].dropna()
+                _, p_value = ttest_ind(treated_values, control_values, equal_var=False, nan_policy='omit')
+                if p_value < 0.05:
+                    balanced = False
+                    break
+            
+            if balanced:
+                balanced_results[year] = removal_count
+                break
+    
+    return balanced_results
+
+# Search the parameter space
+def search_parameter_space(data, years, variables_of_interest, parish_removals_range, distance_threshold_range):
+    parameter_space_results = {}
+    for max_removals in parish_removals_range:
+        for distance_threshold in distance_threshold_range:
+            balanced_results = iterative_removal_for_balance(
+                data, 
+                years, 
+                variables_of_interest, 
+                distance_threshold, 
+                max_removals
+            )
+            parameter_space_results[(max_removals, distance_threshold)] = balanced_results
+    return parameter_space_results
+
+# Load your dataset
+file_path = './data/balance-tests/joined_data_with_distances.xlsx'  # Replace with your file path
+data = pd.read_excel(file_path)
+
+# Define years and variables of interest
+years_to_test = [1890, 1900, 1910]
+variables_of_interest = [f'shc{i}' for i in range(1, 8)] + ['llabforce']
+
+# Parameter space settings
+parish_removals_range = range(0, 1001, 50)  # From 0 to 1000, in steps of 50
+distance_threshold_range = range(100, 401, 50)  # From 100 to 400, in steps of 50
+
+# Perform the parameter space search
+parameter_space_search_results = search_parameter_space(
+    data, 
+    years_to_test, 
+    variables_of_interest, 
+    parish_removals_range, 
+    distance_threshold_range
+)
+
+
+# Output the results
+for key, value in parameter_space_search_results.items():
+    print(f"Max Removals: {key[0]}, Distance Threshold: {key[1]} - Results: {value}")
+
+

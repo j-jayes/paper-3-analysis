@@ -1,0 +1,184 @@
+-----------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/jonathanjayes/Documents/PhD/paper-3-analysis/logs/movers-by-distance.log
+  log type:  text
+ opened on:  13 Nov 2023, 15:43:53
+
+. 
+. *--------------------------------------------------*
+. * What is the average distance someone moves ?     *
+. *--------------------------------------------------*
+. 
+. summarize dist_bp_to_cp_km
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+dist_bp_to~m |    530,529    36.30787    81.59586          0       1283
+
+. /* 
+> In our sample of treated and control individuals, who are older than 15, the average distance moved from 
+> birth parish to current parish is 36 km.
+> */
+. 
+. 
+. *--------------------------------------------------*
+. * Do people in treated parishes move more or less? *
+. *--------------------------------------------------*
+. * clustering at the parish level.
+. 
+. reg dist_bp_to_cp_km birth_parish_treated, vce(cluster birth_parish_ref_code)
+
+Linear regression                               Number of obs     =    530,529
+                                                F(1, 1822)        =       8.49
+                                                Prob > F          =     0.0036
+                                                R-squared         =     0.0050
+                                                Root MSE          =     81.393
+
+                      (Std. err. adjusted for 1,823 clusters in birth_parish_ref_code)
+--------------------------------------------------------------------------------------
+                     |               Robust
+    dist_bp_to_cp_km | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+---------------------+----------------------------------------------------------------
+birth_parish_treated |   20.68408   7.097663     2.91   0.004      6.76367    34.60449
+               _cons |   34.56126   1.424696    24.26   0.000     31.76705    37.35547
+--------------------------------------------------------------------------------------
+
+. 
+. /* 
+> They move on average 20km more from their birth parish compared to control individuals
+> 
+> This makes sense, as our treated parishes have higher incomes, on average.
+> */
+. 
+. *--------------------------------------------------*
+. * What about when we add in controls?              *
+. *--------------------------------------------------*
+. 
+. reg dist_bp_to_cp_km birth_parish_treated female age b2.hisclass, vce(cluster birth_parish_ref_code)
+
+Linear regression                               Number of obs     =    530,529
+                                                F(9, 1822)        =     175.09
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0606
+                                                Root MSE          =     79.087
+
+                         (Std. err. adjusted for 1,823 clusters in birth_parish_ref_code)
+-----------------------------------------------------------------------------------------
+                        |               Robust
+       dist_bp_to_cp_km | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------------+----------------------------------------------------------------
+   birth_parish_treated |   17.96834     6.7464     2.66   0.008     4.736852    31.19983
+                 female |  -2.215049   .6883963    -3.22   0.001    -3.565177   -.8649197
+                    age |   .2261348   .0281485     8.03   0.000     .1709281    .2813416
+                        |
+               hisclass |
+                 Elite  |   111.8712   4.490192    24.91   0.000     103.0648    120.6777
+               Foremen  |    57.7846   2.807441    20.58   0.000     52.27846    63.29074
+   Low-skilled workers  |    19.9561   1.052843    18.95   0.000     17.89119      22.021
+Medium-skilled workers  |    24.0492   1.697542    14.17   0.000     20.71987    27.37853
+     Unskilled workers  |   15.46788   .6401889    24.16   0.000      14.2123    16.72346
+          White collar  |   52.08392   3.283809    15.86   0.000      45.6435    58.52435
+                        |
+                  _cons |   4.492239    1.68888     2.66   0.008     1.179895    7.804584
+-----------------------------------------------------------------------------------------
+
+. 
+. /* 
+> Older people have moved further (this makes sense to me), women move marginally less
+> 
+> Relative to farmers and fishermen, elites move the furthest, followed by foremen and white collar workers
+> .
+> 
+> This also makes sense as it is costly to move, and if you don't have skills that reward moving, you don't
+> .
+> */
+. 
+. *--------------------------------------------------*
+. * What about holders of direct electricity jobs?   *
+. *--------------------------------------------------*
+. 
+. reg dist_bp_to_cp_km electricity_job_direct birth_parish_treated female age b2.hisclass, vce(cluster birt
+> h_parish_ref_code)
+
+Linear regression                               Number of obs     =    530,529
+                                                F(10, 1822)       =     157.72
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0607
+                                                Root MSE          =     79.083
+
+                         (Std. err. adjusted for 1,823 clusters in birth_parish_ref_code)
+-----------------------------------------------------------------------------------------
+                        |               Robust
+       dist_bp_to_cp_km | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------------+----------------------------------------------------------------
+ electricity_job_direct |   12.05422   3.839191     3.14   0.002     4.524545     19.5839
+   birth_parish_treated |   17.91839   6.753062     2.65   0.008     4.673833    31.16295
+                 female |  -2.188501   .6866694    -3.19   0.001    -3.535242   -.8417585
+                    age |   .2271989   .0280723     8.09   0.000     .1721416    .2822562
+                        |
+               hisclass |
+                 Elite  |   111.8538   4.489513    24.91   0.000     103.0486    120.6589
+               Foremen  |   57.76613   2.807456    20.58   0.000     52.25996     63.2723
+   Low-skilled workers  |   19.96342   1.053355    18.95   0.000     17.89751    22.02932
+Medium-skilled workers  |     23.623   1.679859    14.06   0.000     20.32834    26.91765
+     Unskilled workers  |   15.48861   .6408097    24.17   0.000     14.23181    16.74541
+          White collar  |   52.08979   3.284267    15.86   0.000     45.64846    58.53111
+                        |
+                  _cons |   4.433556   1.685125     2.63   0.009     1.128576    7.738536
+-----------------------------------------------------------------------------------------
+
+. 
+. /* 
+> Holders of direct electricity jobs moved 15km further on average to their current parish, controlling for
+>  standard controls
+> */
+. 
+. *--------------------------------------------------*
+. * What about holders of indirect electricity jobs?   *
+. *--------------------------------------------------*
+. 
+. reg dist_bp_to_cp_km electricity_job_indirect birth_parish_treated female age b2.hisclass, vce(cluster bi
+> rth_parish_ref_code)
+
+Linear regression                               Number of obs     =    530,529
+                                                F(10, 1822)       =     160.57
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0607
+                                                Root MSE          =     79.081
+
+                          (Std. err. adjusted for 1,823 clusters in birth_parish_ref_code)
+------------------------------------------------------------------------------------------
+                         |               Robust
+        dist_bp_to_cp_km | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------------------+----------------------------------------------------------------
+electricity_job_indirect |  -3.233449   1.320403    -2.45   0.014    -5.823111   -.6437857
+    birth_parish_treated |   18.05575    6.72793     2.68   0.007     4.860485    31.25102
+                  female |   -2.45654   .7182187    -3.42   0.001    -3.865159   -1.047922
+                     age |    .221836   .0271878     8.16   0.000     .1685135    .2751584
+                         |
+                hisclass |
+                  Elite  |   112.1225     4.4432    25.23   0.000     103.4082    120.8368
+                Foremen  |   58.18569   2.750035    21.16   0.000     52.79213    63.57924
+    Low-skilled workers  |   20.51465   1.005655    20.40   0.000      18.5423    22.48701
+ Medium-skilled workers  |   24.83635   1.529702    16.24   0.000      21.8362    27.83651
+      Unskilled workers  |    15.5986   .6368259    24.49   0.000     14.34962    16.84759
+           White collar  |   52.11475   3.281311    15.88   0.000     45.67922    58.55027
+                         |
+                   _cons |   4.755768   1.651747     2.88   0.004     1.516252    7.995285
+------------------------------------------------------------------------------------------
+
+. 
+. /* 
+> Holders of indirect electricity do not move further on average to their current parish, controlling for s
+> tandard controls
+> 
+> I think this indicates that skills for direct electricity jobs were more scarce than for indirect electri
+> city jobs. Indirect electricity jobs could be filled locally.
+> */
+. 
+. log close
+      name:  <unnamed>
+       log:  /Users/jonathanjayes/Documents/PhD/paper-3-analysis/logs/movers-by-distance.log
+  log type:  text
+ closed on:  13 Nov 2023, 15:43:56
+-----------------------------------------------------------------------------------------------------------

@@ -1,0 +1,98 @@
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point, LineString
+import json
+
+# Load and prepare the initial datasets
+balance_tests_path = './data/balance-tests/Balance-tests-from-Stata.xlsx'
+treated_parishes_path = './data/parishes/treated_parishes.xlsx'
+geojson_path = './data/maps/Swedish_parishes_1926.geojson'
+
+balance_tests_data = pd.read_excel(balance_tests_path)
+treated_parishes_data = pd.read_excel(treated_parishes_path)
+
+# Joining the data on 'parish_code'
+joined_data = pd.merge(balance_tests_data, treated_parishes_data, on='parish_code', how='left')
+
+# set treated to 0 if nan
+joined_data['treated'] = joined_data['treated'].fillna(0)
+
+# set parish_code to int
+joined_data['parish_code'] = joined_data['parish_code'].astype(int)
+
+# Load and prepare the GEOJSON data
+with open(geojson_path, 'r') as file:
+    geojson_data = json.load(file)
+
+for feature in geojson_data["features"]:
+    ref_code = feature["properties"].get("ref_code", "")
+    parish_code = ref_code.replace("SE/", "")  # Removing 'SE/' prefix
+    feature["properties"]["parish_code"] = parish_code
+
+geojson_df = pd.DataFrame([feature["properties"] for feature in geojson_data["features"]])
+
+# Converting the GeoJSON data to a GeoDataFrame
+gdf = gpd.GeoDataFrame.from_features(geojson_data["features"])
+gdf.set_crs('EPSG:4326', inplace=True)  # Assuming the original CRS is WGS84 (EPSG:4326)
+
+# Calculate centroids
+gdf['centroid'] = gdf.geometry.centroid
+gdf = gdf.to_crs('EPSG:3006')
+
+# Define the line between two points
+station1_coords = (12.272571287279908, 58.27550603306433)
+station2_coords = (17.443262677788724, 60.5633613884066)
+line = LineString([station1_coords, station2_coords])
+
+# Create a GeoDataFrame from the line
+line_gdf = gpd.GeoDataFrame(geometry=[line], crs='EPSG:4326')
+line_gdf = line_gdf.to_crs('EPSG:3006')
+
+# Calculate the distance from each parish centroid to the line
+gdf['distance_to_line'] = gdf['centroid'].apply(lambda x: line_gdf.distance(x).min())
+gdf['distance_to_line'] = gdf['distance_to_line'] / 1000  # Convert to kilometers
+
+# set gdf parish_code to int
+gdf['parish_code'] = gdf['parish_code'].astype(int)
+
+# Filter parishes that are treated
+treated_parishes = gdf[gdf['parish_code'].isin(joined_data[joined_data['treated'] == 1]['parish_code'])]
+
+# Initialize the 'touching_treated' column to 0 for all rows in gdf
+gdf['touching_treated'] = 0
+
+# Iterate over each parish in gdf
+for idx, parish in gdf.iterrows():
+    # Check if the current parish is not treated
+    if not joined_data[(joined_data['parish_code'] == parish['parish_code']) & (joined_data['treated'] == 1)].empty:
+        continue
+
+    # Check if the parish touches any treated parish
+    for _, treated_parish in treated_parishes.iterrows():
+        if parish['geometry'].touches(treated_parish['geometry']):
+            gdf.at[idx, 'touching_treated'] = 1
+            break
+
+
+
+
+
+# join gdf["distance_to_line"] to joined_data on parish_code
+joined_data_with_distances = pd.merge(joined_data, gdf[["parish_code", "distance_to_line", "touching_treated"]], on="parish_code", how="left")
+
+# save joined_data_with_distances to xlsx
+joined_data_with_distances.to_excel('./data/balance-tests/joined_data_with_distances.xlsx')
+
+# Now filter for parishes in 1930 census
+# Load the CSV file containing the subset of parishes
+subset_parishes_path = './data/balance-tests/parishes_1930.csv'
+subset_parishes = pd.read_csv(subset_parishes_path)
+
+# Extract the first 5 or 6 digits from the 'parish_code' in the original dataset
+joined_data_with_distances['parish_code_short'] = joined_data_with_distances['parish_code'] // 1000  # Integer division to remove the last three digits
+
+# Filter the original dataset to include only rows where the shortened 'parish_code' matches those in the subset
+filtered_data_with_distances = joined_data_with_distances[joined_data_with_distances['parish_code_short'].isin(subset_parishes['parish_code'])]
+
+filtered_data_with_distances.to_excel('./data/balance-tests/filtered_data_with_distances.xlsx')
+

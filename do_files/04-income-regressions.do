@@ -7,8 +7,8 @@ clear all
 set more off 
 
 * Setting the working directory
-cd "C:\Users\User\Documents\Recon\paper-3-analysis"
-* cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
+* cd "C:\Users\User\Documents\Recon\paper-3-analysis"
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
 
 
 
@@ -39,10 +39,10 @@ reg log_income birth_parish_treated age age_2 female, vce(cluster birth_parish_r
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -65,7 +65,7 @@ forvalues i = 0.1(0.1)0.9 {
 	di `i'
 
 	qreg2 log_income birth_parish_treated age ///
-	age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+	age_2 female i.marital i.schooling i.hisclass, ///
 	quantile(`i') cluster (birth_parish_ref_code)
 	
 	loc h = `i' * 10
@@ -74,13 +74,13 @@ forvalues i = 0.1(0.1)0.9 {
 }
 
 qreg2 log_income birth_parish_treated age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.8) cluster (birth_parish_ref_code)
 	
 eststo Model8
 
 qreg2 log_income birth_parish_treated age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.9) cluster (birth_parish_ref_code)
 	
 eststo Model9
@@ -98,17 +98,13 @@ esttab Model1 Model2 Model3 Model4 Model5 Model6 Model7 Model8 Model9 ///
 *-------------------------------------------------------------*
 eststo clear
 
-<<<<<<< HEAD
-forvalues i = 0.1(0.1)0.9 {
-=======
 
 forvalues i = 0.1(0.1)0.7 {
->>>>>>> 2f3594b6d3a4506fe99badebc5e7c3ee47a3c6c0
 
 	di `i'
 
 	qreg2 log_income birth_parish_treated##c.popular_movement_density_1910_FA age ///
-	age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+	age_2 female i.marital i.schooling i.hisclass, ///
 	quantile(`i') cluster (birth_parish_ref_code)
 	
 	loc h = `i' * 10
@@ -117,13 +113,13 @@ forvalues i = 0.1(0.1)0.7 {
 }
 
 qreg2 log_income birth_parish_treated##c.popular_movement_density_1900_FA age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.8) cluster (birth_parish_ref_code)
 	
 eststo Model8
 
 qreg2 log_income birth_parish_treated##c.popular_movement_density_1900_FA age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.9) cluster (birth_parish_ref_code)
 	
 eststo Model9
@@ -146,7 +142,7 @@ forvalues i = 0.1(0.1)0.7 {
 	di `i'
 
 	qreg2 log_income birth_parish_treated##c.popular_movement_density_1930_FA age ///
-	age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+	age_2 female i.marital i.schooling i.hisclass, ///
 	quantile(`i') cluster (birth_parish_ref_code)
 	
 	loc h = `i' * 10
@@ -155,13 +151,13 @@ forvalues i = 0.1(0.1)0.7 {
 }
 
 qreg2 log_income birth_parish_treated##c.popular_movement_density_1930_FA age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.8) cluster (birth_parish_ref_code)
 	
 eststo Model8
 
 qreg2 log_income birth_parish_treated##c.popular_movement_density_1930_FA age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.9) cluster (birth_parish_ref_code)
 	
 eststo Model9
@@ -185,7 +181,7 @@ forvalues i = 0.1(0.1)0.7 {
 	di `i'
 
 	qreg2 log_income birth_parish_treated##c.popular_movement_density_1910_FA age ///
-	age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+	age_2 female i.marital i.schooling i.hisclass, ///
 	quantile(`i') cluster (birth_parish_ref_code)
 	
 	loc h = `i' * 10
@@ -194,13 +190,13 @@ forvalues i = 0.1(0.1)0.7 {
 }
 
 qreg2 log_income birth_parish_treated##c.popular_movement_density_1910_FA age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.8) cluster (birth_parish_ref_code)
 	
 eststo Model8
 
 qreg2 log_income birth_parish_treated##c.popular_movement_density_1910_FA age ///
-age_2 female i.marital i.schooling i.hisclass_group_abb, ///
+age_2 female i.marital i.schooling i.hisclass, ///
 quantile(.9) cluster (birth_parish_ref_code)
 	
 eststo Model9
@@ -227,10 +223,10 @@ reg log_income birth_parish_treated age age_2 female, vce(cluster birth_parish_r
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -260,10 +256,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1900_FA age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1900_FA age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1900_FA age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -293,10 +289,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1910_FA age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1910_FA age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1910_FA age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -326,10 +322,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1900_NY age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1900_NY age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1900_NY age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -359,10 +355,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1910_NY age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1910_NY age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1910_NY age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -392,10 +388,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1900_PA age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1900_PA age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1900_PA age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -425,10 +421,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1910_PA age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1910_PA age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1910_PA age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -458,10 +454,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1900_FR age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1900_FR age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1900_FR age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -491,10 +487,10 @@ reg log_income birth_parish_treated##c.popular_movement_density_1910_FR age age_
 eststo Model2
 estadd scalar mean_depvar = `mean2'
 
-* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass_group_abb
+* Model 3: Extending Model 2 by adding marital status, schooling, and hisclass
 quietly summarize log_income
 local mean3 = round(r(mean), 0.01)
-reg log_income birth_parish_treated##c.popular_movement_density_1910_FR age age_2 female i.marital i.schooling i.hisclass_group_abb, vce(cluster birth_parish_ref_code)
+reg log_income birth_parish_treated##c.popular_movement_density_1910_FR age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
 eststo Model3
 estadd scalar mean_depvar = `mean3'
 
@@ -504,3 +500,9 @@ esttab Model1 Model2 Model3 using `results_dir'/041_log-income-regression_intera
   cells(b(star fmt(3)) se(par fmt(2))) ///
   addnotes("Robust standard errors in parentheses")
 
+  
+*-------------------------------------------------------------*
+* Linear Regressions for log_income: Interaction of hisclass with treatment?
+*-------------------------------------------------------------*
+
+reg log_income birth_parish_treated##b2.hisclass age age_2 female i.marital i.schooling, vce(cluster birth_parish_ref_code)

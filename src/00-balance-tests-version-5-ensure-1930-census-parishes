@@ -1,0 +1,10 @@
+import pandas as pd
+
+data_1930 = pd.read_parquet('./data/census/census_1930.parquet')
+
+parishes_1930 = data_1930["ref_code_current_parish_x"].unique()
+
+# save parishes_1930 to csv in data/balance-tests
+parishes_1930 = pd.DataFrame(parishes_1930, columns=["parish_code"])
+
+parishes_1930.to_csv('./data/balance-tests/parishes_1930.csv', index=False)
