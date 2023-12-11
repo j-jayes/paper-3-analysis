@@ -1,0 +1,141 @@
+---
+title: "Gender composition of electricity jobs"
+format: html
+---
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(arrow)
+
+library(showtext)
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+theme_set(theme_light())
+
+df <- read_parquet(here("data/census/census_1930_excl_unbalanced_controls.parquet"))
+
+df <- as_tibble(df)
+
+df %>% select(contains("napp"))
+```
+
+
+What do we want to do? Count the most common occupations among electricity direct and indirect jobs, and how many women there are in each, translate them, and then plot them.
+
+```{r}
+top_direct_electricity_jobs <- df %>% 
+    filter(electricity_job_direct == 1) %>% 
+    mutate(job_type = fct_lump(yrke.x, 10, other_level = "Other direct electricity job"), 
+    job_type = fct_infreq(job_type)) 
+
+top_direct_electricity_jobs %>% 
+count(job_type, female) %>% 
+mutate(female = case_when(
+    female == 1 ~ "Female",
+    TRUE ~ "Male"
+)) 
+
+# to translation
+
+tribble(
+  ~job_type,                    ~female,  ~n,
+  "Other direct electricity job", "Male",   1396,
+  "Other direct electricity job", "Female",   60,
+  "Electrician",                 "Male",    852,
+  "Electricity Installer",       "Male",    655,
+  "Lineworker",                  "Male",    285,
+  "Lineworker",                  "Female",    1,
+  "Power Plant Worker",          "Male",    169,
+  "Electrical Fitter",           "Male",    161,
+  "Electricity Worker",          "Male",    124,
+  "Electricity Machinist",       "Male",     35,
+  "Electricity Installation Worker", "Male",  22,
+  "Electrician Apprentice",      "Male",     22,
+  "Electrical Assembler",        "Male",     20
+) %>%
+mutate(job_type = fct_inorder(job_type)) %>%
+ggplot(aes(x = n, y = job_type, fill = female)) +
+geom_col(show.legend = F) +
+scale_x_continuous(labels = scales::label_comma()) +
+labs(x = "Direct electricity jobs", fill = "Gender", y = NULL) +
+scale_fill_brewer(palette = "Dark2") +
+theme(    text = element_text(family = "ibm", size = 12)) +
+expand_limits(x = 1550)
+
+ggsave(filename = here::here("figures/051-gender-composition-occupations.jpeg"), device = "jpeg", width = 140, height = 196, units = "mm", dpi = 300)
+
+```
+
+
+```{r}
+top_indirect_electricity_jobs <- df %>% 
+    filter(electricity_job_indirect == 1) %>% 
+    mutate(job_type = fct_lump(yrke.x, 10, other_level = "Other indirect electricity job"), 
+    job_type = fct_infreq(job_type)) 
+
+top_indirect_electricity_jobs %>% 
+count(job_type, female) %>% 
+mutate(female = case_when(
+    female == 1 ~ "Female",
+    TRUE ~ "Male"
+)) 
+
+# to translation
+
+tribble(
+  ~job_type,                       ~female,    ~n,
+  "Other indirect electricity job", "Male",    46569,
+  "Other indirect electricity job", "Female",  12079,
+  "Sawmill Worker",                "Male",     4649,
+  "Sawmill Worker",                "Female",     8,
+  "Textile Worker",                "Male",     1758,
+  "Textile Worker",                "Female",  1575,
+  "Carpentry Worker",              "Male",     3016,
+  "Carpentry Worker",              "Female",     3,
+  "Factory Worker",                "Male",     2355,
+  "Factory Worker",                "Female",   544,
+  "Saw Worker",                    "Male",     1732,
+  "Blacksmith",                    "Male",     1731,
+  "Workshop Worker",               "Male",     1486,
+  "Workshop Worker",               "Female",     6,
+  "Sheet Metal Worker",            "Male",     1487,
+  "Metal Worker",                  "Male",     1454,
+  "Metal Worker",                  "Female",   13,
+  "Machinist",                     "Male",     1437,
+  "Machinist",                     "Female",    4
+) %>%
+mutate(job_type = fct_inorder(job_type)) %>%
+ggplot(aes(x = n, y = job_type, fill = female)) +
+geom_col() +
+scale_x_continuous(labels = scales::label_comma()) +
+labs(x = "Indirect electricity jobs", fill = "Gender", y = NULL) +
+scale_fill_brewer(palette = "Dark2") +
+theme(    text = element_text(family = "ibm", size = 12))
+
+ggsave(filename = here::here("figures/052-gender-composition-occupations.jpeg"), device = "jpeg", width = 170, height = 196, units = "mm", dpi = 300)
+```
+
+
+
+
+
+```{r}
+library(magick)
+
+# Read the images
+image1 <- image_read("figures/051-gender-composition-occupations.jpeg")
+image2 <- image_read("figures/052-gender-composition-occupations.jpeg")
+
+# Combine images side by side
+combined_image <- image_append(c(image1, image2), stack = FALSE) 
+
+# Save the combined image
+image_write(combined_image, "figures/053-gender-composition-occupations.jpeg")
+
+```

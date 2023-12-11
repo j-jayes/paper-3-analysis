@@ -3,9 +3,10 @@ set more off
 
 /* Insert your own pathname here */
 * cd "[path]/replication/"
-cd "C:\Users\User\Documents\Recon\SC-1930\replication\"
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
 
-use "data/data Table 2", clear
+import excel "data/balance-tests/filtered_data_with_distances_balanced.xlsx", sheet("Sheet1") firstrow
+
 
 /////////////////////////////////////////
 /////// Variable definitions
@@ -17,12 +18,8 @@ use "data/data Table 2", clear
 * numerical identifier of parish
 
 ** treated
-* dummy variable denoting parishes that were connected to the western line electricity grid after 1900
+* dummy variable denoting parishes that were connected to the western line electricity grid
 
-** strikes/strikesoff/strikesdef
-* total number of strikes
-* number of offensive strikes 
-* number of defensive strikes
 
 ** labforce
 * number of individuals in labor force
@@ -38,13 +35,32 @@ use "data/data Table 2", clear
 * 7. Unskilled
 
 /////////////////////////////////////////
-/////// Table 2: Differences Between Connected and Unconnected Parishes Prior to Access to the Grid, 1900
+/////// Table: Differences Between Connected and Unconnected Parishes Prior to Access to the Grid 1890
+
+drop if year != 1890
 
 * create table with the mean and standard deviation of each variable by later access to the grid
-tabstat labforce shc1 shc2 shc3 shc4 shc5 shc6 shc7 strikes strikesoff strikesdef, by(ever_iline) format(%5.0g) stat(mean sd)
+tabstat llabforce shc1 shc2 shc3 shc4 shc5 shc6 shc7, by(treated) format(%5.0g) stat(mean sd)
 
 * test for difference-in-means 
-foreach var of varlist labforce shc1 shc2 shc3 shc4 shc5 shc6 shc7 strikes strikesoff strikesdef {
-ttest `var', by(ever_iline) 
+foreach var of varlist llabforce shc1 shc2 shc3 shc4 shc5 shc6 shc7 {
+ttest `var', by(treated)
 }
 
+/////////////////////////////////////////
+/////// Table: Differences Between Connected and Unconnected Parishes Prior to Access to the Grid 1900
+
+
+clear all
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
+import excel "data/balance-tests/filtered_data_with_distances_balanced.xlsx", sheet("Sheet1") firstrow
+
+drop if year != 1900
+
+* create table with the mean and standard deviation of each variable by later access to the grid
+tabstat llabforce shc1 shc2 shc3 shc4 shc5 shc6 shc7, by(treated) format(%5.0g) stat(mean sd)
+
+* test for difference-in-means 
+foreach var of varlist llabforce shc1 shc2 shc3 shc4 shc5 shc6 shc7 {
+ttest `var', by(treated)
+}

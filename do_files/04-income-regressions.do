@@ -11,7 +11,6 @@ set more off
 cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
 
 
-
 * Load the dataset created by the 'set_dataset_params.do' script
 use "data/census/1930_census_regression_dataset_params_set.dta"
 
@@ -47,7 +46,7 @@ eststo Model3
 estadd scalar mean_depvar = `mean3'
 
 * Tabulate the regression results and save them in TeX format
-esttab Model1 Model2 Model3 using `results_dir'/04_log-income-regression.tex, label replace ///
+esttab Model1 Model2 Model3 using `results_dir'/04-log-income-regression.tex, label replace ///
   stats(r2 N F mean_depvar, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat" "Mean Dependent Var")) ///
   cells(b(star fmt(3)) se(par fmt(2))) ///
   addnotes("Robust standard errors in parentheses")
@@ -97,6 +96,7 @@ esttab Model1 Model2 Model3 Model4 Model5 Model6 Model7 Model8 Model9 ///
 * Quantile Regressions for log_income: Main Specification 
 *-------------------------------------------------------------*
 eststo clear
+local results_dir "results/regressions/"
 
 
 forvalues i = 0.1(0.1)0.7 {

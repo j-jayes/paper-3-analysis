@@ -1,0 +1,111 @@
+---
+title: "Paper in a graph: structural change"
+format: html
+---
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(arrow)
+library(ggtext)
+library(showtext)
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+theme_set(theme_light())
+
+df <- read_parquet(here("data/census/census_1930_excl_unbalanced_controls.parquet"))
+
+df <- as_tibble(df)
+
+df <- df %>% 
+filter(birth_parish_distance_to_line <= 300,
+  age >= 15,
+  age <= 100)
+
+```
+
+
+
+
+
+```{r}
+
+electricity_jobs <- tibble(title = c("Electricity generators", 
+                                     "Electricians and wiremen", 
+                                     "Linesmen: telephone, telegraph and electric",
+                                     "Farm workers, specialisation unknown",
+                                     "General farmers and farmers nfs",
+                                     "Factory labourers (unspecified)")) %>%
+  # bind_rows(metal_machine_jobs) %>% 
+  mutate(Electricity_related = case_when(
+    row_number() <= 3 ~ TRUE,
+    TRUE ~ FALSE
+  ))
+  
+hisclass_order <- tribble( ~ hisclass_group_abb, ~ order,
+                           "Elite", 1,
+                           "White collar", 2,
+                           "Foremen", 3,
+                           "Medium-skilled workers", 4,
+                           "Farmers and fishermen", 5,
+                           "Low-skilled workers", 6,
+                           "Unskilled workers", 7)
+
+df %>%
+  mutate(treated = case_when(
+    electricity_parish_born == 1 & electricity_parish_living_in == 1 & age >= 28 ~ "Treated",
+    electricity_parish_born == 1 & electricity_parish_living_in == 1 & age < 28 ~ "Too young to be treated",
+    TRUE ~ "Control"
+  )) %>%
+  filter(
+    female == 0,
+    treated != "Too young to be treated",
+    age <= 45,
+    !is.na(log_income),
+    !is.na(hisclass_group_abb)
+  ) %>%
+  inner_join(hisclass_order) %>%
+    count(treated, napp_title, hisclass_group_abb) %>%
+  group_by(treated) %>% 
+  mutate(pct_share = n / sum(n)) %>% 
+  ungroup() %>% 
+  inner_join(electricity_jobs, by = c("napp_title" = "title")) %>% 
+  mutate(napp_title = case_when(
+    napp_title == "Factory labourers (unspecified)" ~ "Factory labourers",
+    napp_title == "Farm workers, specialisation unknown" ~ "Farm workers",
+    napp_title == "General farmers and farmers nfs" ~ "Farmers",
+    napp_title == "Linesmen: telephone, telegraph and electric" ~ "Linesmen: telephone,\ntelegraph and electric",
+    TRUE ~ napp_title
+  )) %>% 
+  mutate(napp_title = fct_reorder(napp_title, pct_share),
+         pct_share_lab = scales::percent(pct_share, accuracy = 0.1)) %>% 
+  ggplot(aes(pct_share, napp_title, fill = Electricity_related)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = pct_share_lab), hjust = -0.1) +
+  scale_x_continuous(labels = scales::percent_format(), limits = c(NA, .24)) +
+  scale_fill_manual(values = c("#1b9e77", "#d95f02")) +
+  facet_wrap(vars(treated)) +
+  labs(fill = "Electricity related job",
+       y = NULL,
+       x = "Share of total jobs",
+       # title = "Share of employment in <b><span style = 'color:#d95f02;'>electricity related</span></b> and <b><span style = 'color:#1b9e77;'>other</span></b> jobs",
+       ) +
+  theme(
+    # panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.subtitle = element_markdown(size = 18, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = "ibm", size = 18)
+  )
+  
+ggsave(filename = here::here("figures/06-job_share_plot.jpeg"), 
+    device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```

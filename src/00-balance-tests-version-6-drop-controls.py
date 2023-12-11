@@ -151,3 +151,21 @@ t_test_results_balanced_shc6_1900 = perform_t_tests(treated_1900, balanced_contr
 # pretty printing the results
 pprint(t_test_results_balanced_shc6_1890)
 pprint(t_test_results_balanced_shc6_1900)
+
+# Now we have a balanced control group and a treated group who match on shc1-shc7 and llabforce. 
+# The t-tests show that the groups are not significantly different for any of the variables.
+
+# We can concatenate the treated and balanced control groups to create a new dataframe with all the data
+df_balanced = pd.concat([treated_group, balanced_control_group_shc6])
+
+# Saving the dataframe to a new file
+df_balanced.to_excel('data/balance-tests/filtered_data_with_distances_balanced.xlsx', index=False)
+
+# Find the control parishes that were dropped
+control_group[~control_group.index.isin(balanced_control_group_shc6.index)]
+
+# Keep just their parish_code and parish_code_short without duplicates
+control_group[~control_group.index.isin(balanced_control_group_shc6.index)][['parish_code', 'parish_code_short']].drop_duplicates()
+
+# save this smaller dataframe to a new file
+control_group[~control_group.index.isin(balanced_control_group_shc6.index)][['parish_code', 'parish_code_short']].drop_duplicates().to_excel('data/balance-tests/control_parishes_dropped.xlsx', index=False)
