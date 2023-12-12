@@ -3,22 +3,26 @@
 \begin{tabular}{l*{3}{c}}
 \hline\hline
                     &\multicolumn{1}{c}{(1)}         &\multicolumn{1}{c}{(2)}         &\multicolumn{1}{c}{(3)}         \\
-                    & Total Power         &Total Power Transmitted         &Total Power Generated         \\
+                    &log(Total Power)         &log(Total Power Transmitted)         &log(Total Power Generated)         \\
                     &        b/se         &        b/se         &        b/se         \\
 \hline
-Treated parishes    &       2.425\sym{***}&       2.633\sym{***}&       0.989         \\
-                    &      (0.28)         &      (0.29)         &      (0.70)         \\
-Parish area in square kilometers&       0.000\sym{*}  &       0.000\sym{**} &      -0.000         \\
+Treated parishes    &       0.677\sym{***}&       0.699\sym{***}&      -0.069         \\
+                    &      (0.20)         &      (0.18)         &      (0.11)         \\
+Parish area in square kilometers&       0.000\sym{***}&       0.000\sym{***}&      -0.000         \\
                     &      (0.00)         &      (0.00)         &      (0.00)         \\
-Parish population in 1900&       0.000\sym{***}&       0.000\sym{***}&       0.000         \\
+Parish population in 1900&       0.000\sym{***}&       0.000\sym{***}&       0.000\sym{***}\\
                     &      (0.00)         &      (0.00)         &      (0.00)         \\
-Constant            &       4.426\sym{***}&       4.228\sym{***}&       5.541\sym{***}\\
-                    &      (0.13)         &      (0.14)         &      (0.34)         \\
+Latitude            &       0.197\sym{***}&       0.232\sym{***}&       0.037         \\
+                    &      (0.06)         &      (0.05)         &      (0.03)         \\
+Longitude           &      -0.070         &      -0.087\sym{*}  &       0.013         \\
+                    &      (0.05)         &      (0.04)         &      (0.02)         \\
+Constant            &      -9.677\sym{**} &     -11.655\sym{***}&      -2.124         \\
+                    &      (2.95)         &      (2.76)         &      (1.62)         \\
 \hline
-R-squared           &        0.25         &        0.27         &        0.07         \\
-Observations        &         531         &         496         &          96         \\
-F-stat              &      58.804         &      59.820         &       2.272         \\
-Mean Dependent Var  &        5.57         &        5.40         &        5.65         \\
+R-squared           &        0.17         &        0.19         &        0.03         \\
+Observations        &        1684         &        1684         &        1684         \\
+F-stat              &      68.552         &      78.333         &      10.151         \\
+Mean Dependent Var  &        1.62         &        1.45         &        0.35         \\
 \hline\hline
 \multicolumn{4}{l}{\footnotesize Robust standard errors in parentheses}\\
 \end{tabular}
