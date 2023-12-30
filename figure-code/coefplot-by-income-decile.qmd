@@ -289,7 +289,7 @@ data_1930 <- process_year(coefficients_1930, standard_errors_1930, 1930)
 
 # Combine all the data
 all_year_data <- bind_rows(data_1900, data_1910, data_1930) %>% 
-  mutate(    year = as.character(year))
+  mutate(year = as.character(year))
 
 # Process baseline data
 baseline_data <- process_baseline(coefficients_baseline, standard_errors_baseline)
@@ -298,24 +298,30 @@ baseline_data <- process_baseline(coefficients_baseline, standard_errors_baselin
 all_data <- bind_rows(baseline_data, all_year_data) %>%
   mutate(
     Variable = fct_relevel(Variable, "Union density"),
-    Variable = fct_relevel(Variable, "Treated")
+    Variable = fct_relevel(Variable, "Treated"),
+    year = fct_relevel(year, "Baseline")
   )
 
 # Create a facet plot
 ggplot(all_data, aes(x = decile, y = coefficient, color = Variable)) +
-  geom_point(cex = 2, alpha = .5) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
   geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
   facet_grid(year ~ .) +
   theme_light() +
   scale_colour_brewer(palette = "Dark2") +
   geom_hline(yintercept = 0, lty = 2) +
   scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
   labs(
     x = "Percentile of the income distribution",
     y = "Magnitude of regression coefficient",
-    title = "Coefficients from quantile regression",
-    subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
   )
+
+ggsave(filename = here::here("figures/08-union-density-effect.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+
 
 ```
 

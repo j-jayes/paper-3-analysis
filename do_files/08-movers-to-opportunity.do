@@ -24,7 +24,7 @@ log using "logs/movers-by-distance.log", replace
 * What is the average distance someone moves ?	   *
 *--------------------------------------------------*
 
-summarize dist_bp_to_cp_km
+summarize dist_bp_to_cp_km if dist_bp_to_cp_km > 0, detail
 /* 
 In our sample of treated and control individuals, who are older than 15, the average distance moved from birth parish to current parish is 36 km.
 */
@@ -78,5 +78,39 @@ Holders of indirect electricity do not move further on average to their current 
 
 I think this indicates that skills for direct electricity jobs were more scarce than for indirect electricity jobs. Indirect electricity jobs could be filled locally.
 */
+
+
+
+
+
+
+*--------------------------------------------------*
+* Movers and stayers   *
+*--------------------------------------------------*
+
+gen mover = .
+replace mover = 0 if dist_bp_to_cp_km == 0
+replace mover = 1 if dist_bp_to_cp_km > 0
+
+label var mover "Moves from parish of birth"
+
+summarize mover, detail
+
+tab mover birth_parish_treated, col
+
+reg log_income mover##birth_parish_treated age age_2 female i.marital i.schooling i.hisclass, vce(cluster birth_parish_ref_code)
+eststo Model1
+
+
+local results_dir "results/regressions/"
+
+
+* Tabulate the regression results and save them in TeX format
+esttab Model1 using `results_dir'/08-log-income-regression-for-movers-and-stayers.tex, label replace ///
+  stats(r2 N F mean_depvar, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat" "Mean Dependent Var")) ///
+  cells(b(star fmt(3)) se(par fmt(2))) ///
+  addnotes("Clustered standard errors in parentheses")
+
+
 
 log close

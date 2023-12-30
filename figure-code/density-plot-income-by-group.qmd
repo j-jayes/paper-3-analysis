@@ -1,0 +1,62 @@
+---
+title: "Density plot income by group"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(arrow)
+library(ggtext)
+library(showtext)
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+theme_set(theme_light())
+
+df <- read_parquet(here("data/census/census_1930_excl_unbalanced_controls.parquet"))
+
+df <- as_tibble(df)
+
+df <- df %>%
+    filter(
+        birth_parish_distance_to_line <= 300,
+        age >= 15,
+        age <= 100
+    )
+
+```
+
+
+
+
+```{r}
+df %>%
+    filter(electricity_job_direct == 1) %>%
+    group_by(birth_parish_treated) %>%
+    summarize(log_income = mean(log_income, na.rm = T)) %>% 
+    mutate(income_kr = exp(log_income))
+
+df %>%
+    filter(electricity_job_indirect == 1) %>%
+    group_by(birth_parish_treated) %>%
+    summarize(log_income = mean(log_income, na.rm = T)) %>% 
+    mutate(income_kr = exp(log_income))
+
+df %>%
+    filter(
+        electricity_job_indirect == 0,
+        electricity_job_direct == 0
+    ) %>%
+    group_by(birth_parish_treated) %>%
+    summarize(log_income = mean(log_income, na.rm = T)) %>% 
+    mutate(income_kr = exp(log_income))
+
+```

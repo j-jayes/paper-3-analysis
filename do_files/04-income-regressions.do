@@ -176,6 +176,9 @@ esttab Model1 Model2 Model3 Model4 Model5 Model6 Model7 Model8 Model9 ///
 *-------------------------------------------------------------*
 eststo clear
 
+local results_dir "results/regressions/"
+
+
 forvalues i = 0.1(0.1)0.7 {
 
 	di `i'
