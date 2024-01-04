@@ -1,0 +1,49 @@
+
+
+
+```{r}
+# Load necessary library
+library(tidyverse)
+theme_set(theme_light())
+
+# Data
+
+# deciles go from 5 to 95 by 5
+deciles <- seq(5, 95, 10)
+coefficients <- c(0.000, 0.471, 0.224, 0.173, 0.128, 0.113, 0.088, 0.073, 0.057, 0.053)
+standard_errors <- c(0.01199, 0.11700, 0.04990, 0.04159, 0.03416, 0.03035, 0.02976, 0.03427, 0.04283, 0.04983)
+
+# Create tibble
+data_tibble <- tibble(Decile = deciles, Coefficient = coefficients, Standard_Error = standard_errors)
+
+# Print the tibble
+print(data_tibble)
+
+df = data_tibble %>% janitor::clean_names()
+
+df
+```
+
+
+
+
+```{r}
+
+# Create the plot
+df %>%
+  ggplot(aes(decile, coefficient)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_errorbar(aes(ymin = coefficient - 1.96 * standard_error, ymax = coefficient + 1.96 * standard_error), width = 2, colour = "#d95f02") +
+  geom_line(colour = "#d95f02") +
+  geom_point(cex = 3, colour = "#d95f02") +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nNote that the scale on the y-axis is not the same.\nError bars show 95% CI"
+  )
+
+
+ggsave(filename = here::here("figures/04-coefficient-plot-treated-by-income.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```

@@ -5,6 +5,9 @@ import scipy.stats as stats
 # Step 1: Read the data from the Excel file
 data = pd.read_excel("data/balance-tests/filtered_data_with_distances_balanced.xlsx")
 
+# Make unbalanced sample tables
+data = pd.read_excel("data/balance-tests/filtered_data_with_distances.xlsx")
+
 # Step 2: Filter the data for treated and control groups for each year
 treated_1890 = data[(data["treated"] == 1) & (data["year"] == 1890)]
 control_1890 = data[(data["treated"] == 0) & (data["year"] == 1890)]
@@ -25,21 +28,29 @@ means_1900_control = control_1900[variables].apply(np.nanmean)
 stds_1900_control = control_1900[variables].std()
 
 # Step 4: Perform t-tests for each variable and year
-ttest_1890 = pd.DataFrame(index=variables, columns=["Mean (Treated)", "Mean (Control)", "Difference", "p-value"])
-ttest_1900 = pd.DataFrame(index=variables, columns=["Mean (Treated)", "Mean (Control)", "Difference", "p-value"])
+ttest_1890 = pd.DataFrame(index=variables, columns=["Mean (Treated)", "Mean (Control)", "Std (Treated)", "Std (Control)", "Difference", "p-value"])
+ttest_1900 = pd.DataFrame(index=variables, columns=["Mean (Treated)", "Mean (Control)", "Std (Treated)", "Std (Control)", "Difference", "p-value"])
 
 for variable in variables:
     ttest_1890.loc[variable, "Mean (Treated)"] = means_1890_treated[variable]
     ttest_1890.loc[variable, "Mean (Control)"] = means_1890_control[variable]
-    ttest_1890.loc[variable, "Difference"], ttest_1890.loc[variable, "p-value"] = stats.ttest_ind(
+    ttest_1890.loc[variable, "Std (Treated)"] = stds_1890_treated[variable]
+    ttest_1890.loc[variable, "Std (Control)"] = stds_1890_control[variable]
+    ttest_1890.loc[variable, "Difference"] = means_1890_treated[variable] - means_1890_control[variable], 
+    ttest_1890.loc[variable, "p-value"] = stats.ttest_ind(
         treated_1890[variable], control_1890[variable], nan_policy='omit'
     )
 
     ttest_1900.loc[variable, "Mean (Treated)"] = means_1900_treated[variable]
     ttest_1900.loc[variable, "Mean (Control)"] = means_1900_control[variable]
-    ttest_1900.loc[variable, "Difference"], ttest_1900.loc[variable, "p-value"] = stats.ttest_ind(
+    ttest_1900.loc[variable, "Std (Treated)"] = stds_1900_treated[variable]
+    ttest_1900.loc[variable, "Std (Control)"] = stds_1900_control[variable]
+    ttest_1900.loc[variable, "Difference"] = means_1900_treated[variable] - means_1900_control[variable], , 
+    ttest_1900.loc[variable, "p-value"] = stats.ttest_ind(
         treated_1900[variable], control_1900[variable], nan_policy='omit'
     )
+
+
 
 # Step 5: Format the output as LaTeX tables
 shc_titles = {

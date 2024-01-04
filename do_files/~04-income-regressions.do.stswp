@@ -85,7 +85,7 @@ esttab Model5 Model15 Model25 Model35 Model45 Model55 Model65 Model75 Model85 Mo
 
   
 *-------------------------------------------------------------*
-* Quantile Regressions for log_income: 1900 union density 
+* Quantile Regressions for log_income: Main Specification 
 *-------------------------------------------------------------*
 eststo clear
 
@@ -163,7 +163,7 @@ forvalues i = 0.05(0.1) .95 {
 	
 * Tabulate the regression results and save them in TeX format
 esttab Model5 Model15 Model25 Model35 Model45 Model55 Model65 Model75 Model85 Model95 ///
-	using $results_dir/0404-quantile_reg_1930_union_density_log-income.tex, label replace ///
+	using $results_dir/0404-quantile_reg_1910_union_density_log-income.tex, label replace ///
     stats(r2 N F mean_depvar, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat" "Mean Dependent Var")) ///
     cells(b(star fmt(3)) se(par fmt(5))) ///
     addnotes("Clustered standard errors in parentheses")
