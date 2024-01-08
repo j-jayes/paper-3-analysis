@@ -27,6 +27,94 @@ filter(birth_parish_distance_to_line <= 300,
   age >= 15,
   age <= 100)
 
+
+df %>% 
+select(contains("income"))
+
+df %>% 
+    filter(income_incl_zero > 0) %>% 
+  group_by(current_parish_treated) %>%
+  arrange(income_incl_zero) %>%
+  mutate(cumulative_income = cumsum(income_incl_zero), # Convert log income to actual income and cumulatively sum
+         total_income = max(cumulative_income),
+         percentile_rank = ntile(income_incl_zero, 100), # Assigning percentile rank
+         cumulative_income_share = cumulative_income / total_income) %>%
+  group_by(current_parish_treated, percentile_rank) %>%
+  summarize(cumulative_share = first(cumulative_income_share)) %>% 
+  ungroup() %>%
+  ggplot(aes(x = percentile_rank, y = cumulative_share, color = as.factor(current_parish_treated))) +
+    geom_abline() +
+  geom_line() +
+  labs(title = "Cumulative Income Share by Percentile and Treatment Group",
+       x = "Percentile Rank",
+       y = "Cumulative Share of Income",
+       color = "Group") +
+  theme_minimal()
+
+
+lorenz_data <- df %>% 
+    filter(income_imputed_mean > 0) %>% 
+    group_by(current_parish_treated) %>%
+  arrange(income_imputed_mean) %>%
+  mutate(population = row_number() / n(),
+         income_cumulative = cumsum(income_imputed_mean) / sum(income_imputed_mean)) %>% 
+  mutate(current_parish_treated = case_when(
+    current_parish_treated == 1 ~ "Treated",
+    current_parish_treated == 0 ~ "Control",
+    TRUE ~ NA_character_
+  )) 
+
+# Plot the Lorenz curve
+ggplot(lorenz_data, aes(x = population, y = income_cumulative, colour = factor(current_parish_treated))) +
+  geom_line() +
+  geom_abline(slope = 1, color = 'gray30', linetype = 'dashed') +
+  labs(x = "Cumulative Share of Population", y = "Cumulative Share of Income") +
+  scale_colour_brewer(palette = 'Dark2') +
+  coord_cartesian() +
+  guides(colour = guide_legend(reverse = TRUE)) +
+  labs(colour = "Parish of residence 1930") +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = 'ibm', size = 18)
+  ) 
+
+
+ggsave(filename = here::here("figures/071-inequality-plot.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+
+
+```
+
+
+
+```{r}
+
+gini_data <- df %>% 
+    filter(current_parish_treated == 1,
+    income_incl_zero > 0) %>% 
+  arrange(income_incl_zero) %>%
+  mutate(population = row_number() / n(),
+         income_cumulative = cumsum(income_incl_zero) / sum(income_incl_zero)) %>% 
+  mutate(current_parish_treated = case_when(
+    current_parish_treated == 1 ~ "Treated",
+    current_parish_treated == 0 ~ "Control",
+    TRUE ~ NA_character_
+  )) 
+
+gini_data <- gini_data %>%
+  mutate(lead_income_cumulative = lead(income_cumulative, default = 1),
+         b = (lead_income_cumulative + income_cumulative) / 2,
+         h = 1 / n())
+
+gini_coefficient <- 1 - sum(gini_data$h * gini_data$b)
+
+
+
 ```
 
 What is the figure that we want to make?
@@ -231,5 +319,44 @@ decile_shares %>%
     )
 
 ggsave(filename = here::here("figures/07-inequality-plot.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+
+```
+
+
+
+
+Trying again:
+
+
+```{r}
+df <- df %>%
+    select(log_income, birth_parish_treated, current_parish_treated, current_parish_ref_code) %>%
+    mutate(log_income_incl_zero = case_when(
+        log_income == -Inf ~ 1,
+        is.na(log_income) ~ 0,
+        TRUE ~ log_income
+    ))
+
+cumulative_income_share <- df %>%
+filter(log_income > .2) %>% 
+  group_by(current_parish_treated) %>%
+  arrange(log_income_incl_zero) %>%
+  mutate(cumulative_income = cumsum(exp(log_income_incl_zero)), # Convert log income to actual income and cumulatively sum
+         total_income = max(cumulative_income),
+         percentile_rank = ntile(log_income_incl_zero, 100), # Assigning percentile rank
+         cumulative_income_share = cumulative_income / total_income) %>%
+  group_by(current_parish_treated, percentile_rank) %>%
+  summarize(cumulative_share = first(cumulative_income_share))
+
+
+
+ggplot(cumulative_income_share, aes(x = percentile_rank, y = cumulative_share, color = as.factor(current_parish_treated))) +
+    geom_abline() +
+  geom_line() +
+  labs(title = "Cumulative Income Share by Percentile and Treatment Group",
+       x = "Percentile Rank",
+       y = "Cumulative Share of Income",
+       color = "Group") +
+  theme_minimal()
 
 ```
