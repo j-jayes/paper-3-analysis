@@ -59,4 +59,11 @@ df %>%
     summarize(log_income = mean(log_income, na.rm = T)) %>% 
     mutate(income_kr = exp(log_income))
 
+
+df %>%
+    group_by(birth_parish_treated) %>%
+    summarize(log_income = mean(log_income, na.rm = T)) %>% 
+    mutate(income_kr = exp(log_income))
+
+
 ```

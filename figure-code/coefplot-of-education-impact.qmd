@@ -1,0 +1,51 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{r}
+
+library(tidyverse)
+library(ggtext)
+library(showtext)
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+
+# Creating the tibble
+coeff_data <- tibble(
+  variable = c("Primary school", "Post primary schooling", "Post-secondary and university"),
+  coefficient = c(0.427, 0.330, 0.238),
+  std_error = c(0.15, 0.16, 0.25)
+) %>% 
+    mutate(variable = fct_reorder(variable, coefficient))
+
+
+# Calculating the 95% confidence intervals
+coeff_data <- coeff_data %>%
+  mutate(lower_ci = coefficient - 1.96 * std_error,
+         upper_ci = coefficient + 1.96 * std_error)
+
+# Creating the coefficient plot
+ggplot(coeff_data, aes(y = variable, x = coefficient)) +
+  geom_vline(xintercept = 0, color = "gray20", linetype = "dashed") +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower_ci, xmax = upper_ci), height = 0.2) +
+  theme_minimal() +
+  labs(x = "Magnitude of Regression Coefficient for\nVariable Interacted with Birth Parish (Treated)", y = "Variable Interacted with Birth Parish (Treated)") +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    text = element_text(family = 'ibm', size = 18)
+  ) 
+
+
+ggsave(filename = here::here("figures/09-coefficient-plot-education.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+
+```

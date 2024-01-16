@@ -276,10 +276,11 @@ all_data <- bind_rows(baseline_data, all_year_data) %>%
     Variable = fct_relevel(Variable, "Union density"),
     Variable = fct_relevel(Variable, "Treated"),
     year = fct_relevel(year, "Baseline")
-  ) %>% as_tibble()
+  ) %>% as_tibble() %>% 
+  filter(year != "Baseline")
 
 # Create a facet plot
-ggplot(all_year_data, aes(x = decile, y = coefficient, color = Variable)) +
+ggplot(all_data, aes(x = decile, y = coefficient, color = Variable)) +
   geom_line() +
   geom_point(cex = 2, alpha = .8) +
   geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +

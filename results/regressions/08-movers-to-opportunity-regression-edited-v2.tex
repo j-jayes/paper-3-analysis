@@ -1,0 +1,31 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+                    &\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}\\
+\hline
+Control Parish, Stayer (Ref) &         0            &       0         &       0         \\
+                    &                     &         (.)         &         (.)         \\
+Birth Parish (Treated)=1&          0.285\sym{***}           &       0.531\sym{**} &       0.375\sym{**} \\
+                    &                (0.09)      &      (0.20)         &      (0.13)         \\
+Birth Parish (Treated)=1 $\times$ Moves from parish of birth=1&                     &      -0.371         &                     \\
+                    &                     &      (0.20)         &                     \\
+Birth Parish (Treated)=1 $\times$ Moves to a treated parish=1&                     &                     &      -0.450\sym{**} \\
+                    &                     &                     &      (0.14)         \\
+Moves from parish of birth=1&                     &       0.459\sym{***}&                     \\
+                    &                     &      (0.07)         &                     \\
+Moves from parish of birth&                     &                     &       0.409\sym{***}\\
+                    &                     &                     &      (0.07)         \\
+Moves to a treated parish=1&                     &                     &       0.282\sym{***}\\
+                    &                     &                     &      (0.05)         \\
+Constant            &       3.487\sym{***}&       3.157\sym{***}&       3.182\sym{***}\\
+                    &      (0.14)         &      (0.14)         &      (0.14)         \\
+\hline
+R-squared           &        0.27         &        0.27         &        0.27         \\
+Observations        &      343488         &      343488         &      343488         \\
+F-stat              &    2009.514         &    1942.414         &    1837.207         \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Clustered standard errors in parentheses}\\
+\end{tabular}
+}

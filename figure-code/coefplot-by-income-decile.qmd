@@ -9,7 +9,7 @@ format: html
 library(tidyverse)
 theme_set(theme_light())
 
-# Create atheme_light()# Create a data frame for coefficients
+# Create a data frame for coefficients
 coefficients <- data.frame(
   Variable = c("Birth Parish (Treated) = 1", 
                "popular_movement_density_1900_FA", 

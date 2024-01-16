@@ -27,6 +27,10 @@ filter(birth_parish_distance_to_line <= 300,
   age >= 15,
   age <= 100)
 
+
+df %>% 
+# filter(electricity_job_indirect == 1) %>%
+count(napp_title, sort = T)
 ```
 
 
@@ -40,12 +44,17 @@ electricity_jobs <- tibble(title = c("Electricity generators",
                                      "Linesmen: telephone, telegraph and electric",
                                      "Farm workers, specialisation unknown",
                                      "General farmers and farmers nfs",
+                                     "Labourers nfs",
+                                     "Sawyers and other titled wood/sawmill operatives",
+                                     "Textile workers, specialisation unknown",
                                      "Factory labourers (unspecified)")) %>%
   # bind_rows(metal_machine_jobs) %>% 
   mutate(Electricity_related = case_when(
-    row_number() <= 3 ~ TRUE,
-    TRUE ~ FALSE
-  ))
+    between(row_number(), 4, 6) ~ "Other jobs",
+    between(row_number(), 1, 3) ~ "Direct electricity",
+    TRUE ~ "Indirect electricity"
+  )) %>% 
+  mutate(Electricity_related = fct_relevel(Electricity_related,  "Other jobs", "Indirect electricity", "Direct electricity"))
   
 hisclass_order <- tribble( ~ hisclass_group_abb, ~ order,
                            "Elite", 1,
@@ -76,10 +85,13 @@ df %>%
   ungroup() %>% 
   inner_join(electricity_jobs, by = c("napp_title" = "title")) %>% 
   mutate(napp_title = case_when(
-    napp_title == "Factory labourers (unspecified)" ~ "Factory labourers",
+    napp_title == "Labourers nfs" ~ "General labourers",
     napp_title == "Farm workers, specialisation unknown" ~ "Farm workers",
     napp_title == "General farmers and farmers nfs" ~ "Farmers",
     napp_title == "Linesmen: telephone, telegraph and electric" ~ "Linesmen: telephone,\ntelegraph and electric",
+    napp_title == "Factory labourers (unspecified)" ~ "Factory labourers",
+    napp_title == "Textile workers, specialisation unknown" ~ "Textile workers",
+    napp_title == "Sawyers and other titled wood/sawmill operatives" ~ "Sawyers and sawmill operatives",
     TRUE ~ napp_title
   )) %>% 
   mutate(napp_title = fct_reorder(napp_title, pct_share),
@@ -88,8 +100,8 @@ df %>%
   geom_col(position = "dodge") +
   geom_text(aes(label = pct_share_lab), hjust = -0.1) +
   scale_x_continuous(labels = scales::percent_format(), limits = c(NA, .24)) +
-  scale_fill_manual(values = c("#1b9e77", "#d95f02")) +
-  facet_wrap(vars(treated)) +
+  scale_fill_brewer(palette = "Dark2") +
+  facet_grid(Electricity_related ~ treated, scales = "free_y") +
   labs(fill = "Electricity related job",
        y = NULL,
        x = "Share of total jobs",

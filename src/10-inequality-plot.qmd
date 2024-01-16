@@ -28,36 +28,13 @@ filter(birth_parish_distance_to_line <= 300,
   age <= 100)
 
 
-df %>% 
-select(contains("income"))
-
-df %>% 
-    filter(income_incl_zero > 0) %>% 
-  group_by(current_parish_treated) %>%
-  arrange(income_incl_zero) %>%
-  mutate(cumulative_income = cumsum(income_incl_zero), # Convert log income to actual income and cumulatively sum
-         total_income = max(cumulative_income),
-         percentile_rank = ntile(income_incl_zero, 100), # Assigning percentile rank
-         cumulative_income_share = cumulative_income / total_income) %>%
-  group_by(current_parish_treated, percentile_rank) %>%
-  summarize(cumulative_share = first(cumulative_income_share)) %>% 
-  ungroup() %>%
-  ggplot(aes(x = percentile_rank, y = cumulative_share, color = as.factor(current_parish_treated))) +
-    geom_abline() +
-  geom_line() +
-  labs(title = "Cumulative Income Share by Percentile and Treatment Group",
-       x = "Percentile Rank",
-       y = "Cumulative Share of Income",
-       color = "Group") +
-  theme_minimal()
-
 
 lorenz_data <- df %>% 
-    filter(income_imputed_mean > 0) %>% 
+    filter(income_incl_zero > 0) %>% 
     group_by(current_parish_treated) %>%
-  arrange(income_imputed_mean) %>%
+  arrange(income_incl_zero) %>%
   mutate(population = row_number() / n(),
-         income_cumulative = cumsum(income_imputed_mean) / sum(income_imputed_mean)) %>% 
+         income_cumulative = cumsum(income_incl_zero) / sum(income_incl_zero)) %>% 
   mutate(current_parish_treated = case_when(
     current_parish_treated == 1 ~ "Treated",
     current_parish_treated == 0 ~ "Control",
@@ -80,7 +57,6 @@ ggplot(lorenz_data, aes(x = population, y = income_cumulative, colour = factor(c
     
     plot.title = element_markdown(size = 32, family = 'roboto'),
     plot.title.position = "plot",
-    legend.position = "none",
     text = element_text(family = 'ibm', size = 18)
   ) 
 
@@ -93,7 +69,31 @@ ggsave(filename = here::here("figures/071-inequality-plot.jpeg"), device = "jpeg
 
 
 ```{r}
+# For control group
+gini_data <- df %>% 
+    filter(current_parish_treated == 0,
+    income_incl_zero > 0) %>% 
+  arrange(income_incl_zero) %>%
+  mutate(population = row_number() / n(),
+         income_cumulative = cumsum(income_incl_zero) / sum(income_incl_zero)) %>% 
+  mutate(current_parish_treated = case_when(
+    current_parish_treated == 1 ~ "Treated",
+    current_parish_treated == 0 ~ "Control",
+    TRUE ~ NA_character_
+  )) 
 
+gini_data <- gini_data %>%
+  mutate(lead_income_cumulative = lead(income_cumulative, default = 1),
+         b = (lead_income_cumulative + income_cumulative) / 2,
+         h = 1 / n())
+
+gini_coefficient <- 1 - sum(gini_data$h * gini_data$b)
+
+# print the gini coefficient for the control group with label
+print("Gini coefficient for control group")
+gini_coefficient
+
+# For treated group
 gini_data <- df %>% 
     filter(current_parish_treated == 1,
     income_incl_zero > 0) %>% 
@@ -113,7 +113,11 @@ gini_data <- gini_data %>%
 
 gini_coefficient <- 1 - sum(gini_data$h * gini_data$b)
 
+print("Gini coefficient for Treated group")
+gini_coefficient
 
+df %>% 
+count(schooling)
 
 ```
 

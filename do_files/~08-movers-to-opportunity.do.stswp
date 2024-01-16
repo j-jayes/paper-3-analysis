@@ -47,7 +47,7 @@ eststo Model3
 
 * Tabulate the regression results and save them in TeX format
 esttab Model1 Model2 Model3 using $results_dir/08-movers-to-opportunity-regression.tex, label replace ///
-  stats(r2 N F, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat")) ///
+  stats(ar2 N F, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat")) ///
   cells(b(star fmt(3)) se(par fmt(2))) ///
   addnotes("Clustered standard errors in parentheses")
 
