@@ -46,7 +46,7 @@ eststo Model3
 estadd scalar mean_depvar = `mean3'
 
 * Tabulate the regression results and save them in TeX format
-esttab Model1 Model2 Model3 using `results_dir'/04-log-income-regression.tex, label replace ///
+esttab Model1 Model2 Model3 using $results_dir/04-log-income-regression.tex, label replace ///
   stats(r2 N F mean_depvar, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat" "Mean Dependent Var")) ///
   cells(b(star fmt(3)) se(par fmt(2))) ///
   addnotes("Clustered standard errors in parentheses")
@@ -82,7 +82,49 @@ esttab Model5 Model15 Model25 Model35 Model45 Model55 Model65 Model75 Model85 Mo
     cells(b(star fmt(3)) se(par fmt(5))) ///
     addnotes("Clustered standard errors in parentheses")
 
+	
+*-------------------------------------------------------------*
+* Quantile Regressions for log_income: Quantile regressions sans controls
+*-------------------------------------------------------------*
+eststo clear
 
+
+forvalues i = 0.05(0.1) .95 {
+
+	di `i'
+
+	qreg2 log_income birth_parish_treated, ///
+	quantile(`i') cluster (birth_parish_ref_code)
+	
+	loc h = round(`i' * 100)
+	
+	di `h'
+	
+	eststo Model`h'
+}
+
+
+* Tabulate the regression results and save them in TeX format
+esttab Model5 Model15 Model25 Model35 Model45 Model55 Model65 Model75 Model85 Model95 ///
+	using $results_dir/0401-quantile_reg_log-income_no_controls.tex, label replace ///
+    stats(r2 N F mean_depvar, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat" "Mean Dependent Var")) ///
+    cells(b(star fmt(3)) se(par fmt(5))) ///
+    addnotes("Clustered standard errors in parentheses")
+	
+	
+	
+*-------------------------------------------------------------*
+* Quantile Regressions for log_income: Quantile regressions (unconditional)
+*-------------------------------------------------------------*
+eststo clear
+
+global x age age_2 female i.marital i.schooling i.hisclass
+
+rqr log_income birth_parish_treated, quantile(.15(.1).85) controls($x) 
+
+bootstrap, reps(10): rqr log_income birth_parish_treated, quantile(.15(.1).85) controls($x) 
+
+rqrplot
   
 *-------------------------------------------------------------*
 * Quantile Regressions for log_income: 1900 union density 

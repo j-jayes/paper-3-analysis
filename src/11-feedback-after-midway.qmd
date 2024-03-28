@@ -1,0 +1,128 @@
+---
+title: "Untitled"
+format: html
+---
+
+## Purpose
+
+After the midway seminar I received some useful feedback from Christian - here I go through the questions and feedback and how I plan to address them.
+
+```{r}
+library(tidyverse)
+library(here)
+library(arrow)
+library(ggtext)
+library(showtext)
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+theme_set(theme_light())
+
+df <- read_parquet(here("data/census/census_1930_excl_unbalanced_controls.parquet"))
+
+```
+
+### Hidden unemployment
+
+In the paper we have a check on hidden unemployment that asks, "do we see evidence of individuals reporting an occupation but no income, indicative that they might be out of work at this time, but hope to find work again in the same occupation?".
+
+Christian asked if we checked that the occupations in this classification were indeed the ones that we expected to be displaced due to electrification.
+
+What I can do is calculate the relative frequency of these occupations as compared to the total number of observations in the data. I can then compare this to the relative frequency of these occupations in the data that we have classified as hidden unemployment. If the relative frequency of these occupations is higher in the hidden unemployment data, then we can say that these occupations are overrepresented in the hidden unemployment data.
+
+We need some threshold to include occupations in the calculation. I will use the 100 most common occupations in the data as a threshold. If an occupation is not in the 100 most common occupations, then it will not be included in the calculation.
+
+```{r}
+# df %>% 
+#    select("occ_title_without_income")  %>% 
+#    count(occ_title_without_income, sort = TRUE)
+
+# df %>% 
+# colnames()
+
+# df %>% 
+# filter(occ_title_without_income == 1) %>%
+# count(yrke.y, sort = TRUE)
+
+
+total_counts <- df %>% 
+  count(yrke.y, sort = TRUE) %>% 
+  filter(yrke.y != "",
+         !is.na(yrke.y)) %>%
+  slice(1:100) 
+
+
+hidden_unemployment_counts <- df %>%
+    filter(occ_title_without_income == 1) %>%
+    count(yrke.y, sort = TRUE) %>%
+    filter(yrke.y != "",
+             !is.na(yrke.y)) %>%
+    slice(1:100)
+
+library(gt)
+
+total_counts %>%
+    left_join(hidden_unemployment_counts, by = "yrke.y") %>%
+    mutate(hidden_unemployment = n.y / n.x) %>%
+    arrange(desc(hidden_unemployment)) %>%
+    head(20) %>% 
+    gt() %>%
+    tab_header(
+        title = "Relative frequency of occupations in `hidden unemployment` data",
+        subtitle = "Top 20 occupations"
+    ) %>%
+    fmt_number(
+        columns = vars(hidden_unemployment),
+        decimals = 2
+    ) %>%
+    cols_label(
+        yrke.y = "Occupation",
+        n.x = "Total",
+        n.y = "Number reporting no income",
+        hidden_unemployment = "Relative frequency"
+    )  %>% 
+    gtsave(here("figures/02-hidden_unemployment_relative_frequency.png"))
+
+
+
+
+
+```
+
+
+Maybe I should look at their age profile as well, relative to the total population. 
+
+Let's take the 20 most common occupations in hidden_unemployment_counts and compare their age profile to the total population.
+
+
+```{r}
+#| eval: false
+
+jpeg(here("figures/03-age_distribution_hidden_unemployment.jpeg"), width = 10, height = 10, units = "in", res = 300)
+
+df %>% 
+    filter(yrke.y %in% head(hidden_unemployment_counts$yrke.y, 20)) %>%
+    ggplot(aes(x = age, fill = yrke.y)) +
+    geom_density(alpha = 0.5) +
+    theme_minimal() +
+    facet_wrap(~yrke.y, scales = "free") +
+    theme(legend.position = "none") +
+    labs(
+        title = "Age distribution of the 20 most common occupations in hidden unemployment",
+        x = "Age",
+        y = "Density"
+    )
+
+dev.off()
+
+# save to "figures/age_distribution_hidden_unemployment.png"
+
+
+
+```
+
+![](figures/age_distribution_hidden_unemployment.jpeg)
+

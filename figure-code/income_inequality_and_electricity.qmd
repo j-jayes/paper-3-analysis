@@ -1,0 +1,212 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+Sourced from Molinder's paper from 2021 SEHM.
+
+```{r}
+
+
+theme_set(theme_light())
+
+library(showtext)
+library(tidyverse)
+library(ggtext)
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+
+p2 <- tibble(year = c(1870, 1880, 1900, 1920, 1940, 1950),
+       `Bottom (P0-P50)` =  c(11, 17, 19, 16, 20, 21),
+       `Middle (P50-P90)` = c(32, 32, 33, 31, 44, 47),
+       `Top (P90-P100)` =   c(57, 51, 48, 53, 36, 32)) %>% 
+  pivot_longer(- year) %>% 
+  ggplot(aes(year, value, colour = name)) +
+  geom_vline(xintercept = 1921, linetype = "dashed", color = "#A6761D", size = 1.1) +
+  geom_vline(xintercept = 1930, linetype = "solid", color = "#666666", size = 1.1) +
+  geom_point(cex = 4) +
+  geom_line(cex = 2) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, NA)) +
+  gghighlight::gghighlight() +
+  labs(x = NULL,
+       y = "Share of income\nby group",
+       title = NULL
+       # title = "Shares of Income in Sweden",
+       #subtitle = "Source: Bengtsson, Molinder, Prado (2021)"
+       ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = 'ibm', size = 12)
+  ) 
+
+
+
+p3 <- tibble(year = c(1870, 1880, 1900, 1920, 1940, 1950),
+       `Bottom (P0-P50)` =  c(11, 17, 19, 16, 20, 21),
+       `Middle (P50-P90)` = c(32, 32, 33, 31, 44, 47),
+       `Top (P90-P100)` =   c(57, 51, 48, 53, 36, 32)) %>% 
+  pivot_longer(- year) %>% 
+  # relevel the factor to get the correct order in the legend
+  mutate(name = fct_relevel(name, "Bottom (P0-P50)", "Middle (P50-P90)", "Top (P90-P100)")) %>%
+  # reverse the ordering of the factor
+  mutate(name = fct_rev(name)) %>%
+  ggplot(aes(year, value, fill = name)) +
+  geom_area(alpha = .8) +
+  geom_vline(xintercept = 1921, linetype = "dashed", color = "#A6761D", size = 1.1) +
+  geom_vline(xintercept = 1930, linetype = "solid", color = "#666666", size = 1.1) +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, NA)) +
+  # gghighlight::gghighlight() +
+  labs(x = NULL,
+       y = "Share of income\nby group",
+       title = NULL,
+       fill = "Group in income distribution"
+       # title = "Shares of Income in Sweden",
+       #subtitle = "Source: Bengtsson, Molinder, Prado (2021)"
+       ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = 'ibm', size = 12)
+  ) +
+  # fix the guide
+  guides(fill=guide_legend(nrow=3,byrow=TRUE, title.position = "top"))
+
+
+```
+
+
+
+
+```{r}
+df <- readxl::read_excel((here::here("data", "electricity_spread", "vattenfall-electricity-share.xlsx")))
+
+df <- df %>% 
+  mutate(year = case_when(
+  year == min(year) ~ 1900,
+  year == max(year) ~ 1946,
+  TRUE ~ year
+))
+
+# extend the year range back to 1870 setting the value to 0
+df <- df %>% 
+  bind_rows(tibble(year = 1870, value = 0))  %>% 
+  bind_rows(tibble(year = 1950, value = 98))
+
+
+p1 <- df %>% ggplot(aes(year, value)) +
+  geom_vline(xintercept = 1921, linetype = "dashed", color = "#A6761D", size = 1.1) +
+  geom_vline(xintercept = 1930, linetype = "solid", color = "#666666", size = 1.1) +
+  geom_line(colour = "midnightblue", cex = 3) +
+  scale_color_brewer(palette = "Dark2") +
+  annotate("text", x = 1921, y = 20, label = "Western Line Completed", hjust = -0.05, colour = "#A6761D") +
+  annotate("text", x = 1930, y = 10, label = "Outcome Measured", hjust = -0.05, colour = "#666666") +  
+  labs(x = NULL, title = NULL, y = "Share of households in \nrural areas with electricity",
+
+       #caption = "Source: Vattenfall's archive"
+       ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) + 
+  gghighlight::gghighlight(label_params = list(size = 8)) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = 'ibm', size = 12)
+  ) 
+```
+
+
+Cowplot to join the two plots together
+
+```{r}
+
+library(cowplot)
+
+jpeg(here::here("figures", "00-electrification_and_inequality_line_graphs.png"),
+     width = 6, height = 10, units = "in", res = 300)
+
+plot_grid(p1, p2, ncol = 1, align = 'v', axis = 'l') 
+
+dev.off()
+
+jpeg(here::here("figures", "00-electrification_and_inequality_line_and_stacked_bar.png"),
+     width = 6, height = 10, units = "in", res = 300)
+
+plot_grid(p1, p3, ncol = 1, align = 'v', axis = 'l') 
+
+dev.off()
+```
+
+
+
+
+## secondary axis
+
+```{r}
+
+jpeg(here::here("figures", "00-electrification_and_inequality_line_and_stacked_bar_secondary_axis.png"),
+     width = 6, height = 6, units = "in", res = 300)
+
+tibble(year = c(1870, 1880, 1900, 1920, 1940, 1950),
+       `Bottom (P0-P50)` =  c(11, 17, 19, 16, 20, 21),
+       `Middle (P50-P90)` = c(32, 32, 33, 31, 44, 47),
+       `Top (P90-P100)` =   c(57, 51, 48, 53, 36, 32)) %>% 
+  pivot_longer(- year) %>% 
+  mutate(name = fct_relevel(name, "Bottom (P0-P50)", "Middle (P50-P90)", "Top (P90-P100)")) %>%
+  # reverse the ordering of the factor
+  mutate(name = fct_rev(name)) %>%
+  ggplot() +
+  geom_area(aes(year, value, fill = name), alpha = .6) +
+  geom_line(aes(y = value, x = year, colour = "Rural Electrification Rate"), size = 1.1, data = df) +
+  geom_vline(xintercept = 1921, linetype = "dashed", color = "#A6761D", size = 1.1) +
+  geom_vline(xintercept = 1930, linetype = "solid", color = "#666666", size = 1.1) +
+  annotate("text", x = 1921, y = 10, label = "Western Line Completed", hjust = -0.05, colour = "#A6761D") +
+  annotate("text", x = 1930, y = 5, label = "Outcome Measured", hjust = -0.05, colour = "#666666") + 
+  scale_fill_brewer(palette = "Dark2") +
+  scale_colour_manual(values = "midnightblue") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, NA)) +
+  # gghighlight::gghighlight() +
+  labs(x = NULL,
+       y = "Share of income by group &\nShare of electrified rural households",
+       title = NULL,
+       fill = "Group in income distribution",
+       colour = NULL
+       # title = "Shares of Income in Sweden",
+       #subtitle = "Source: Bengtsson, Molinder, Prado (2021)"
+       ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = 'ibm', size = 12),
+    legend.box = "vertical"
+  ) +
+  # fix the guide
+  guides(fill=guide_legend(nrow=3,byrow=TRUE, title.position = "top", order = 2),
+  colour = guide_legend(order = 1))
+
+dev.off()
+
+
+```

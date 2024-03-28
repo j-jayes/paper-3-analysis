@@ -1,0 +1,81 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Iv Regression \label{columns}}
+\begin{tabular}{l*{6}{c}}
+\hline\hline
+                    &\multicolumn{2}{c}{OLS}                    &\multicolumn{2}{c}{First Stage}            &\multicolumn{2}{c}{2SLS}                   \\\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)}&\multicolumn{1}{c}{(6)}\\
+                    &\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Lives in Parish of Birth}&\multicolumn{1}{c}{Lives in Parish of Birth}&\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}\\
+\hline
+Current Parish (Treated)&      0.3599\sym{***}&      0.3280\sym{***}&                     &                     &      0.5725\sym{***}&      0.4275\sym{***}\\
+                    &     (0.091)         &     (0.081)         &                     &                     &     (0.149)         &     (0.126)         \\
+[1em]
+Age                 &                     &      0.1644\sym{***}&                     &      0.0000         &                     &      0.1644\sym{***}\\
+                    &                     &     (0.003)         &                     &     (0.000)         &                     &     (0.003)         \\
+[1em]
+Age Squared         &                     &     -0.0022\sym{***}&                     &      0.0000         &                     &     -0.0022\sym{***}\\
+                    &                     &     (0.000)         &                     &     (0.000)         &                     &     (0.000)         \\
+[1em]
+Female (1 = Yes 0 = No)&                     &     -1.8002\sym{***}&                     &     -0.0024         &                     &     -1.7989\sym{***}\\
+                    &                     &     (0.061)         &                     &     (0.004)         &                     &     (0.061)         \\
+[1em]
+Divorced            &                     &      0.0000         &                     &      0.0000         &                     &      0.0000         \\
+                    &                     &         (.)         &                     &         (.)         &                     &         (.)         \\
+[1em]
+Married             &                     &      1.1007\sym{***}&                     &     -0.0087         &                     &      1.1011\sym{***}\\
+                    &                     &     (0.101)         &                     &     (0.007)         &                     &     (0.101)         \\
+[1em]
+Other               &                     &     -1.0279         &                     &     -0.0589\sym{***}&                     &     -1.0152         \\
+                    &                     &     (1.576)         &                     &     (0.010)         &                     &     (1.576)         \\
+[1em]
+Unmarried           &                     &      0.5528\sym{***}&                     &     -0.0134         &                     &      0.5542\sym{***}\\
+                    &                     &     (0.096)         &                     &     (0.007)         &                     &     (0.096)         \\
+[1em]
+Widow/Widower       &                     &      0.3240\sym{***}&                     &     -0.0032         &                     &      0.3233\sym{***}\\
+                    &                     &     (0.097)         &                     &     (0.008)         &                     &     (0.097)         \\
+[1em]
+Literate            &                     &      0.0000         &                     &      0.0000         &                     &      0.0000         \\
+                    &                     &         (.)         &                     &         (.)         &                     &         (.)         \\
+[1em]
+Post primary schooling&                     &      0.9121\sym{***}&                     &     -0.0061         &                     &      0.9135\sym{***}\\
+                    &                     &     (0.066)         &                     &     (0.009)         &                     &     (0.067)         \\
+[1em]
+Post-secondary and university&                     &      1.2899\sym{***}&                     &     -0.0169         &                     &      1.2928\sym{***}\\
+                    &                     &     (0.096)         &                     &     (0.013)         &                     &     (0.096)         \\
+[1em]
+Primary school      &                     &      0.2752\sym{***}&                     &     -0.0048         &                     &      0.2764\sym{***}\\
+                    &                     &     (0.061)         &                     &     (0.007)         &                     &     (0.062)         \\
+[1em]
+Elite               &                     &      0.0000         &                     &      0.0000         &                     &      0.0000         \\
+                    &                     &         (.)         &                     &         (.)         &                     &         (.)         \\
+[1em]
+Farmers and fishermen&                     &     -1.1738\sym{***}&                     &      0.0049         &                     &     -1.1731\sym{***}\\
+                    &                     &     (0.055)         &                     &     (0.008)         &                     &     (0.055)         \\
+[1em]
+Foremen             &                     &     -0.4741\sym{***}&                     &      0.0020         &                     &     -0.4745\sym{***}\\
+                    &                     &     (0.057)         &                     &     (0.007)         &                     &     (0.057)         \\
+[1em]
+Low-skilled workers &                     &     -1.1801\sym{***}&                     &      0.0274\sym{***}&                     &     -1.1828\sym{***}\\
+                    &                     &     (0.053)         &                     &     (0.007)         &                     &     (0.053)         \\
+[1em]
+Medium-skilled workers&                     &     -0.8490\sym{***}&                     &      0.0116         &                     &     -0.8490\sym{***}\\
+                    &                     &     (0.060)         &                     &     (0.007)         &                     &     (0.060)         \\
+[1em]
+Unskilled workers   &                     &     -1.5962\sym{***}&                     &      0.0175\sym{*}  &                     &     -1.5974\sym{***}\\
+                    &                     &     (0.054)         &                     &     (0.007)         &                     &     (0.054)         \\
+[1em]
+White collar        &                     &     -0.0361         &                     &      0.0193\sym{**} &                     &     -0.0379         \\
+                    &                     &     (0.045)         &                     &     (0.006)         &                     &     (0.045)         \\
+[1em]
+Birth Parish (Treated)&                     &                     &      0.6678\sym{***}&      0.6674\sym{***}&                     &                     \\
+                    &                     &                     &     (0.039)         &     (0.039)         &                     &                     \\
+[1em]
+Constant            &      5.3905\sym{***}&      3.4826\sym{***}&      0.0427\sym{***}&      0.0395\sym{**} &      5.3657\sym{***}&      3.4704\sym{***}\\
+                    &     (0.043)         &     (0.138)         &     (0.004)         &     (0.012)         &     (0.046)         &     (0.138)         \\
+\hline
+Observations        &      343488         &      343488         &      343488         &      343488         &      343488         &      343488         \\
+\hline\hline
+\multicolumn{7}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{7}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

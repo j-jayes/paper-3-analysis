@@ -99,7 +99,7 @@ df %>%
   ggplot(aes(pct_share, napp_title, fill = Electricity_related)) +
   geom_col(position = "dodge") +
   geom_text(aes(label = pct_share_lab), hjust = -0.1) +
-  scale_x_continuous(labels = scales::percent_format(), limits = c(NA, .24)) +
+  scale_x_continuous(labels = scales::percent_format(), limits = c(NA, .2), breaks = c(0, .05, .1, .15)) +
   scale_fill_brewer(palette = "Dark2") +
   facet_grid(Electricity_related ~ treated, scales = "free_y") +
   labs(fill = "Electricity related job",
@@ -121,3 +121,4 @@ df %>%
 ggsave(filename = here::here("figures/06-job_share_plot.jpeg"), 
     device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
 ```
+

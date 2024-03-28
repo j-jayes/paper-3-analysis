@@ -50,6 +50,55 @@ ggsave(filename = here::here("figures/04-coefficient-plot-treated-by-income.jpeg
 
 
 
+```{r}
+
+
+# Create the tibble
+data <- tibble(
+  b = c(0, 7.282e-10, .70280862, .15341352, .11773917, .09669604, .15416652, .11166477, .04318744),
+  se = c(.00139692, .00221162, .0317901, .00690305, .0065265, .00655154, .00649636, .00601907, .00518303),
+  ll = c(-.00273792, -.00433472, .6405009, .13988374, .10494743, .08385521, .14143384, .09986757, .03302886),
+  ul = c(.00273792, .00433472, .76511627, .1669433, .13053091, .10953687, .1668992, .12346197, .05334602)
+)
+
+# rename columns to match the plot above 
+data <- data %>% rename(Coefficient = b, Standard_Error = se, Lower = ll, Upper = ul)
+
+# add a column and call it "estimator" and fill it with the value "Unconditional"
+data <- data %>% mutate(Estimator = "Unconditional QR")
+
+# add a column called decile and fill it with the values 5, 15, 25, 35, 45, 55, 65, 75, 85
+data <- data %>% mutate(decile = c(5, 15, 25, 35, 45, 55, 65, 75, 85)) %>% 
+janitor::clean_names()
+
+# get df from above and add a column and call it "Estimator" and fill it with the value "Conditional"
+df <- df %>% mutate(estimator = "Conditional QR") 
+
+# mutate to create the "Lower" and "Upper" columns
+df <- df %>% mutate(lower = coefficient - 1.96 * standard_error, upper = coefficient + 1.96 * standard_error)
+
+# combine the two dataframes
+data_combined <- bind_rows(data, df)
+
+# recreate the plot above
+data_combined %>%
+  ggplot(aes(decile, coefficient, colour = estimator)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 2) +
+  geom_line() +
+  geom_point(cex = 3) +
+  scale_colour_brewer(palette = "Dark2") +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient",
+    colour = "Estimator"
+  )
+
+ggsave(filename = here::here("figures/041-coefficient-plot-treated-by-income-and-estimator.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
 
 
 ```{r}

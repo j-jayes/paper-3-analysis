@@ -544,6 +544,23 @@ ggsave(filename = here::here("maps/map_big_power_stations_line_1926_with_treated
 ```
 
 
+### write out parishes treated subset and parishes control subset
+
+```{r}
+
+
+
+parishes_subset_treated %>% 
+  st_write(here::here("data", "maps", "parishes_subset_treated.shp"))
+
+parishes_subset_control %>%
+  st_write(here::here("data", "maps", "parishes_subset_control.shp"))
+
+
+```
+
+
+
 ### Power stations and steam
 
 ```{r}
