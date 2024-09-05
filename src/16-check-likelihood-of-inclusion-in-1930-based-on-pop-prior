@@ -1,0 +1,103 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+Purpose
+
+Check the likelihood of inclusion in 1930 based on the population in 1900, 1910.
+
+```{r}
+library(tidyverse)
+
+df_pop <- read_rds(here::here("data", "union-data", "snd", "parish-population-by-parish-for-1930-check-v1.rds"))
+```
+
+The question is are you more likely to be in the 1930 census based on treatment.
+
+So what we want to do is count the number of people in the treatment and control group based on the 1900 and 1910 census, and then count the same for 1930 and check.
+
+```{r}
+df_pop
+```
+
+
+
+```{r}
+library(arrow)
+df_census_1930 <- read_parquet(here::here("data", "census", "census_1930.parquet"))
+
+population_1930 <- df_census_1930 %>% count(ref_code_current_parish_x) %>% 
+rename(parish_code_short = ref_code_current_parish_x,
+pop_1930 = n) 
+
+population_1930
+```
+
+
+
+
+```{r}
+
+treated_parishes <- readxl::read_excel(here::here("data", "parishes", "treated_parishes_with_distance_threshold_and_population.xlsx"))
+
+treated_parishes <- treated_parishes %>% 
+mutate(parish_code_short = str_remove(parish_code, "SE/"),
+parish_code_short = str_sub(parish_code_short, end = -4),
+parish_code_short = as.numeric(parish_code_short))  %>% 
+group_by(parish_code_short) %>%
+slice(1) %>% 
+ungroup()
+
+
+treated_parishes_to_join <- treated_parishes %>% select(parish_code_short, distance_to_line, treated)
+
+treated_parishes_to_join 
+
+```
+
+
+
+```{r}
+df_pop_wide <- df_pop %>% 
+pivot_wider(names_from = year, values_from = total_population, names_prefix = "pop_") 
+
+df_pop_wide_treated <- df_pop_wide %>% 
+inner_join(treated_parishes_to_join, by = c("parish_code_short"))
+
+df_pop_wide_treated_1930 <- df_pop_wide_treated %>% 
+left_join(population_1930, by = c("parish_code_short")) 
+```
+
+
+
+```{r}
+library(gt)
+
+df_pop_wide_treated_1930_tab <- df_pop_wide_treated_1930 %>%
+    filter(!is.na(pop_1930)) %>%
+    group_by(treated) %>%
+    summarise(
+        pop_1900 = sum(pop_1900, na.rm = TRUE),
+        pop_1910 = sum(pop_1910, na.rm = TRUE),
+        pop_1930 = sum(pop_1930, na.rm = TRUE)) %>% 
+        pivot_longer(-treated, names_to = "year", values_to = "pop")  %>% 
+        mutate(treated = ifelse(treated == 1, "treated", "control")) %>%
+        pivot_wider(names_from = treated, values_from = pop)  %>% 
+        mutate(share_treated = treated / (treated + control))  %>% 
+        mutate(year = parse_number(year)) %>%
+        gt() %>% 
+        cols_label(year = "Census Year",
+        treated = "Treated",
+        control = "Control",
+        share_treated = "Percentage Treated")  %>% 
+        fmt_number(columns = vars(treated, control), decimals = 0)  %>% 
+        fmt_percent(columns = vars(share_treated), decimals = 2)   %>%
+        tab_header(title = "Population in 1900, 1910, 1930 by Treatment Group")
+
+
+df_pop_wide_treated_1930_tab %>% 
+        gtsave(here::here("figures", "093-tab-likelihood-of-treatment.png"))
+        
+```

@@ -1,0 +1,252 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{r}
+library(tidyverse)
+
+df_unions <- read_csv("data/union-data/union_density_treatment_and_control.csv")
+
+df_unions %>% select(parish_code, contains("FACK")) %>% 
+pivot_longer(cols = contains("FACK"), names_to = "year", values_to = "FACK")  %>% 
+mutate(year = parse_number(year)) %>% 
+group_by(year) %>%
+# count how many parishes have a value of zero for FACK by year
+summarise(n = sum(FACK == 0)) 
+
+1794 / 2027
+
+1477 / 2027
+```
+
+
+
+First we want to check how many of the parishes have a value of zero for FACK in 1794 and 1477. We can do this by using the following code:
+```{r}
+
+df_unions %>% select(parish_code, treated, contains("FACK")) %>% 
+pivot_longer(cols = contains("FACK"), names_to = "year", values_to = "FACK")  %>% 
+mutate(year = parse_number(year)) %>% 
+mutate(non_zero_flag = ifelse(FACK == 0, 0, 1)) %>%
+group_by(year, treated) %>%
+# count how many parishes have a value of zero for FACK by year
+count(non_zero_flag) 
+
+
+
+
+
+```
+
+
+
+Now we want to calculate the percentage of parishes that have a zero value for each year by treatment status. We can do this by using the following code:
+
+
+```{r}
+df_unions %>% select(parish_code, treated, contains("FACK")) %>% 
+pivot_longer(cols = contains("FACK"), names_to = "year", values_to = "FACK")  %>% 
+mutate(year = parse_number(year)) %>% 
+mutate(non_zero_flag = ifelse(FACK == 0, 0, 1)) %>%
+group_by(year, treated) %>%
+# count how many parishes have a value of zero for FACK by year
+count(non_zero_flag)  %>% 
+ungroup() %>%
+group_by(year) %>%
+mutate(percentage = n / sum(n)) 
+
+```
+
+
+Now we need to join this to the parishes that we have in the sample
+
+```{r}
+library(gt)
+
+
+
+df_unions %>% 
+filter(distance_to_line <= 300) %>% 
+select(parish_code, treated, contains("FACK")) %>% 
+pivot_longer(cols = contains("FACK"), names_to = "year", values_to = "FACK")  %>% 
+mutate(year = parse_number(year))  %>% 
+# filter(FACK != 0) %>% 
+group_by(year, treated) %>%
+summarise(mean_FACK = mean(FACK, na.rm = TRUE), n = n())  %>% 
+mutate(treated = ifelse(treated == 1, "Treated", "Control")) %>%
+gt()  %>% 
+cols_label(n = "Number of parishes",
+mean_FACK = "Mean union density",
+treated = "Group") %>% 
+fmt_number(columns = c(mean_FACK), decimals = 2)  %>% 
+gtsave(here::here("figures", "union_density_treatment_and_control.png"))
+```
+
+
+
+
+```{r}
+df_unions_joined <- readxl::read_excel(here::here("data", "parishes", "union_membership_and_treated_groups_merged.xlsx"), sheet = 2)
+
+df_unions_joined %>% view()
+
+df_unions_joined %>% filter(parish_code == "168601") %>% view()
+
+parishes_we_have_info_for <- df_unions_joined %>%
+filter(!is.na(population_1930)) %>% 
+select(parish_code) %>%
+distinct()
+
+
+df_unions_joined_1930_info <- df_unions_joined %>% 
+filter(parish_code %in% parishes_we_have_info_for$parish_code,
+distance_to_line <= 300) %>% 
+filter(type_of_organization == "FACKF") 
+
+
+df_unions_joined_1930_info 
+
+# Assuming your dataframe is df_unions_joined_1930_info
+
+# Calculate the average for the 10 year window around 1900
+df_unions_joined_1930_info$avg_1900 <- rowMeans(df_unions_joined_1930_info[,paste0("n_members_", 1895:1904)], na.rm = TRUE)
+
+# Calculate the average for the 10 year window around 1910
+df_unions_joined_1930_info$avg_1910 <- rowMeans(df_unions_joined_1930_info[,paste0("n_members_", 1905:1914)], na.rm = TRUE)
+
+# Calculate the average for the 10 year window around 1930
+df_unions_joined_1930_info$avg_1930 <- rowMeans(df_unions_joined_1930_info[,paste0("n_members_", 1925:1934)], na.rm = TRUE)
+
+df_unions_joined_1930_info_sum <- df_unions_joined_1930_info %>%
+  group_by(parish_code) %>%
+  mutate(
+    sum_avg_1900 = sum(avg_1900, na.rm = TRUE),
+    sum_avg_1910 = sum(avg_1910, na.rm = TRUE),
+    sum_avg_1930 = sum(avg_1930, na.rm = TRUE)
+  ) %>% 
+  ungroup() 
+
+
+
+
+df_unions_joined_1930_info_sum_avgs <- df_unions_joined_1930_info_sum %>% 
+select(parish_code, treated, contains("FACK"), contains("population"), contains("sum_avg"))  %>% 
+mutate(density_1900 = sum_avg_1900 / population_1900,
+density_1910 = sum_avg_1910 / population_1910,
+density_1930 = sum_avg_1930 / population_1930)  %>% 
+select(parish_code, treated, density_1900, density_1910, density_1930, contains("sum_avg_"), contains("population"))  %>% 
+distinct()
+
+df_unions_joined_1930_info_sum_avgs %>%
+filter(parish_code == "168601") %>% view()
+
+df_unions_joined_1930_info_sum_calcs <- df_unions_joined_1930_info_sum %>% 
+select(parish_code, treated, contains("FACK"), contains("population"), contains("sum_avg"))  %>% 
+mutate(density_1900 = sum_avg_1900 / population_1900,
+density_1910 = sum_avg_1910 / population_1910,
+density_1930 = sum_avg_1930 / population_1930)  %>% 
+select(parish_code, treated, density_1900, density_1910, density_1930)  %>% distinct() %>% view()
+group_by(treated) %>%
+summarise(mean_density_1900 = mean(density_1900, na.rm = TRUE),
+mean_density_1910 = mean(density_1910, na.rm = TRUE),
+mean_density_1930 = mean(density_1930, na.rm = TRUE),
+n = n())  %>% 
+pivot_longer(cols = contains("density"), names_to = "year", values_to = "density")   %>% 
+mutate(year = parse_number(year),
+treated = ifelse(treated == 1, "Treated", "Control")) %>%
+group_by(year) %>%
+mutate(ratio = density / lag(density)) 
+
+
+df_unions_joined_1930_info_sum_calcs %>% 
+gt()   %>% 
+cols_label(density = "Mean union density",
+treated = "Group",
+ratio = "Ratio of treated to control union density") %>%
+fmt_number(columns = c(density), decimals = 3)  %>% 
+fmt_number(columns = c(ratio), decimals = 2)  %>%
+tab_header(title = md("**Union density by treatment status and year**"),
+subtitle = md("Mean union density is calculated by averaging the number of union members in a 10 year window divided by population from census in year"))   %>% 
+tab_style(
+  style = cell_text(weight = "bold"),
+  locations = cells_row_groups()
+) %>% 
+gtsave(here::here("figures", "union_density_treatment_and_control_by_year.png"))
+
+
+
+```
+
+
+
+
+Check for occupational groupings. 
+
+
+
+```{r}
+library(arrow)
+
+df_census <- read_parquet("data/census/census_1930_excl_unbalanced_controls.parquet")
+
+
+df_census %>%
+filter(electricity_job_direct == 0, electricity_job_indirect == 0) %>%
+count(napp_title, sort = T) %>% 
+head(20) %>% 
+gt()
+```
+
+
+
+Now we want to join parish level data on electrification to the union density data
+
+
+```{r}
+df_union_density = read_csv("data/union-data/union_density_treatment_and_control.csv") %>% 
+select(parish_code, contains("FACK"))  %>% 
+distinct()
+
+df_union_density$popular_movement_density_1900_FACKF <- pmax(pmin(df_union_density$popular_movement_density_1900_FACKF, 100), 0)
+df_union_density$popular_movement_density_1910_FACKF <- pmax(pmin(df_union_density$popular_movement_density_1910_FACKF, 100), 0)
+df_union_density$popular_movement_density_1930_FACKF <- pmax(pmin(df_union_density$popular_movement_density_1930_FACKF, 100), 0)
+
+df_first_stage = readxl::read_excel("data/first-stage/04_firststage-data.xlsx", sheet = 1)
+
+df_first_stage <- df_first_stage %>% 
+mutate(parish_code = str_remove(ref_code, "SE/"),
+# now drop the last three characters and set it to a numeric
+parish_code = as.numeric(str_sub(parish_code, 1, -4))) 
+
+
+df_first_stage <- df_first_stage %>% 
+left_join(df_union_density, by = "parish_code") 
+
+library(haven)
+
+df_first_stage %>% 
+rename(union_density_1900 = popular_movement_density_1900_FACKF,
+union_density_1910 = popular_movement_density_1910_FACKF,
+union_density_1930 = popular_movement_density_1930_FACKF) %>%
+select(!contains("touching")) %>% 
+write_dta(here::here("data", "first-stage", "first_stage_data_with_union_density.dta"))
+```
+
+
+
+
+
+
+
+
+Starting again to join the union membership data up to the population data
+
+
+
+```{r}
+df_unions_joined <- readxl::read_excel(here::here("data", "parishes", "union_membership_and_treated_groups_merged.xlsx"), sheet = 2)
+
+df_unions_joined
+```

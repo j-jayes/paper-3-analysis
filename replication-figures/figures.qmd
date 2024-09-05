@@ -1,0 +1,334 @@
+---
+title: "Replication"
+format: html
+---
+
+Figure 1
+
+```{r}
+# Load packages
+library(tidyverse)
+library(showtext)
+library(ggtext)
+
+# Set params
+theme_set(theme_light())
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+
+
+# load the data
+df <- read_rds(here::here("replication-data", "figure-1.rds"))
+
+jpeg(here::here("replication-figures", "Figure-1.png"),
+     width = 6, height = 6, units = "in", res = 300)
+
+tibble(year = c(1870, 1880, 1900, 1920, 1940, 1950),
+       `Bottom (P0-P50)` =  c(11, 17, 19, 16, 20, 21),
+       `Middle (P50-P90)` = c(32, 32, 33, 31, 44, 47),
+       `Top (P90-P100)` =   c(57, 51, 48, 53, 36, 32)) %>% 
+  pivot_longer(- year) %>% 
+  mutate(name = fct_relevel(name, "Bottom (P0-P50)", "Middle (P50-P90)", "Top (P90-P100)")) %>%
+  mutate(name = fct_rev(name)) %>%
+  ggplot() +
+  geom_area(aes(year, value, fill = name), alpha = .6) +
+  geom_line(aes(y = value, x = year, colour = "Rural Electrification Rate"), size = 1.1, data = df) +
+  geom_vline(xintercept = 1921, linetype = "dashed", color = "#A6761D", size = 1.1) +
+  geom_vline(xintercept = 1930, linetype = "solid", color = "#666666", size = 1.1) +
+  annotate("text", x = 1921, y = 10, label = "Western Line Completed", hjust = -0.05, colour = "#A6761D") +
+  annotate("text", x = 1930, y = 5, label = "Outcome Measured", hjust = -0.05, colour = "#666666") + 
+  scale_fill_brewer(palette = "Dark2") +
+  scale_colour_manual(values = "midnightblue") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, NA)) +
+  labs(x = NULL,
+       y = "Share of income by group &\nShare of electrified rural households",
+       title = NULL,
+       fill = "Group in income distribution",
+       colour = NULL
+       ) +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = 'ibm', size = 12),
+    legend.box = "vertical"
+  ) +
+  guides(fill=guide_legend(nrow=3,byrow=TRUE, title.position = "top", order = 2),
+  colour = guide_legend(order = 1))
+
+dev.off()
+
+```
+
+
+Figure 2
+
+
+```{r}
+df <- read_rds(here::here("replication-data", "figure-2.rds"))
+
+df %>% ggplot(aes(year, value, colour = industry)) +
+    geom_line() +
+    scale_color_brewer(palette = "Dark2") +
+    labs(
+        x = NULL, y = "Electricity as a share of energy use", colour = "Industry",
+    ) +
+    scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+    gghighlight::gghighlight(label_params = list(size = 8), line_label_type = "text_path") +
+    theme(
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.title = element_markdown(size = 32, family = "roboto"),
+        plot.title.position = "plot",
+        legend.position = "none",
+        text = element_text(family = "ibm", size = 18)
+    )
+
+
+ggsave(filename = here::here("replication-figures", "Figure-2.png"), device = "png", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+Figure 3
+
+
+```{r}
+figure_3_data <- read_rds(here::here("replication-data", "figure-3.rds"))
+
+ggplot() +
+    geom_sf(data = figure_3_data$counties, colour = "grey70", fill = "#edf8fb") +
+    # Power plants
+    geom_point(aes(geometry = geometry, colour = "Hydropower plants"),
+        stat = StatSfCoordinates,
+        fun.geometry = sf::st_centroid,
+        size = 10, shape = 18, alpha = .9,
+        data = figure_3_data$hydro
+    ) +
+    # Treated parishes
+    geom_sf(data = figure_3_data$parishes_subset_treated_1930, colour = "grey70", aes(fill = "Treated parishes")) +
+    # Control parishes
+    geom_sf(data = figure_3_data$parishes_subset_control_1930, colour = "grey70", aes(fill = "Control parishes")) +
+    geom_sf_text(aes(label = name), data = hydro, size = 8, nudge_y = .35) +
+    # Lines
+    geom_sf(aes(colour = "Electricity lines\n1926"),
+        data = map_grid %>%
+            filter(year == 1926), linewidth = 1.5, alpha = .3, show.legend = "line"
+    ) +
+    # Fills
+    scale_fill_manual(
+        values = c("Treated parishes" = "#fc8d59", "Control parishes" = "#fef0d9"),
+        guide = guide_legend(override.aes = list(linetype = "blank", shape = NA))
+    ) +
+    scale_color_manual(
+        values = c("Electricity lines\n1926" = "#000080", "Hydropower plants" = "#d7301f"),
+        guide = guide_legend(override.aes = list(
+            linetype = c("solid", "blank"),
+            shape = c(NA, 18)
+        ))
+    ) +
+    coord_sf(
+        xlim = c(NA, 23),
+        ylim = c(55.6, 65)
+    ) +
+    theme_void() +
+    labs(
+        x = NULL,
+        y = NULL,
+        fill = NULL,
+        colour = NULL
+    ) +
+    theme(
+        axis.text = element_blank(),
+        panel.background = element_rect(fill = "#DCE9ED"),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, vjust = -10, size = 10),
+        legend.position = c(0.77, 0.11),
+        text = element_text(family = "ibm", size = 14)
+    )
+
+ggsave(filename = here::here("replication-figures", "Figure-3_1.png"), device = "png", width = 290, height = 231, units = "mm", dpi = 300)
+
+
+ggplot() +
+    geom_sf(data = figure_3_data$counties, colour = "grey70", fill = "#edf8fb") +
+    # Power plants
+    geom_point(aes(geometry = geometry, colour = "Hydropower plants"),
+        stat = StatSfCoordinates,
+        fun.geometry = sf::st_centroid,
+        size = 10, shape = 18, alpha = .9,
+        data = figure_3_data$hydro
+    ) +
+    # Treated parishes
+    geom_sf(data = figure_3_data$parishes_subset_treated, colour = "grey70", aes(fill = "Treated parishes")) +
+    # Control parishes
+    geom_sf(data = figure_3_data$parishes_subset_control, colour = "grey70", aes(fill = "Control parishes")) +
+    geom_sf_text(aes(label = name), data = hydro, size = 8, nudge_y = .35) +
+    # Lines
+    geom_sf(aes(colour = "Electricity lines\n1926"),
+        data = map_grid %>%
+            filter(year == 1926), linewidth = 1.5, alpha = .3, show.legend = "line"
+    ) +
+    # Fills
+    scale_fill_manual(
+        values = c("Treated parishes" = "#fc8d59", "Control parishes" = "#fef0d9"),
+        guide = guide_legend(override.aes = list(linetype = "blank", shape = NA))
+    ) +
+    scale_color_manual(
+        values = c("Electricity lines\n1926" = "#000080", "Hydropower plants" = "#d7301f"),
+        guide = guide_legend(override.aes = list(
+            linetype = c("solid", "blank"),
+            shape = c(NA, 18)
+        ))
+    ) +
+    coord_sf(
+        xlim = c(NA, 23),
+        ylim = c(55.6, 65)
+    ) +
+    theme_void() +
+    labs(
+        x = NULL,
+        y = NULL,
+        fill = NULL,
+        colour = NULL
+    ) +
+    theme(
+        axis.text = element_blank(),
+        panel.background = element_rect(fill = "#DCE9ED"),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, vjust = -10, size = 10),
+        legend.position = c(0.77, 0.11),
+        text = element_text(family = "ibm", size = 14)
+    )
+
+
+ggsave(filename = here::here("replication-figures", "Figure-3_2.png"), device = "png", width = 290, height = 231, units = "mm", dpi = 300)
+
+
+library(magick)
+
+# Read the images
+image1 <- image_read(here::here("replication-figures", "Figure-3_1.png"))
+image2 <- image_read(here::here("replication-figures", "Figure-3_2.png"))
+
+# Combine images side by side
+combined_image <- image_append(c(image2, image1), stack = FALSE)
+
+# Save the combined image
+image_write(combined_image, here::here("replication-figures", "Figure-3.png"))
+```
+
+Figure 4
+
+```{r}
+df <- read_rds(here::here("replication-data", "figure-4.rds"))
+
+df %>%
+    ggplot(aes(decile, coefficient)) +
+    geom_hline(yintercept = 0, lty = 2) +
+    geom_errorbar(aes(ymin = coefficient - 1.96 * standard_error, ymax = coefficient + 1.96 * standard_error), width = 2, colour = "#d95f02") +
+    geom_line(colour = "#d95f02") +
+    geom_point(cex = 3, colour = "#d95f02") +
+    scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+    labs(
+        x = "Percentile of the income distribution",
+        y = "Magnitude of regression coefficient"
+    ) +
+    theme(
+        plot.title = element_markdown(size = 32, family = "roboto"),
+        plot.title.position = "plot",
+        legend.position = "none",
+        text = element_text(family = "ibm", size = 18)
+    )
+
+ggsave(filename = here::here("replication-figures", "Figure-4.png"), device = "png", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+Figure 5
+
+
+```{r}
+df = read_rds(here::here("replication-data", "figure-5.rds"))
+
+ggplot(df, aes(x = population, y = income_cumulative, colour = factor(current_parish_treated))) +
+    geom_line() +
+    geom_abline(slope = 1, color = "gray30", linetype = "dashed") +
+    labs(x = "Cumulative Share of Population", y = "Cumulative Share of Income") +
+    scale_colour_brewer(palette = "Dark2") +
+    coord_cartesian() +
+    guides(colour = guide_legend(reverse = TRUE)) +
+    labs(colour = "Parish of residence 1930") +
+    theme(
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.title = element_markdown(size = 32, family = "roboto"),
+        plot.title.position = "plot",
+        text = element_text(family = "ibm", size = 18)
+    )
+
+ggsave(filename = here::here("replication-figures", "Figure-5.png"), device = "png", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+Figure 6
+
+
+```{r}
+
+df = read_rds(here::here("replication-data", "Figure-6.rds"))
+    
+df %>% 
+    ggplot(aes(pct_share, napp_title, fill = Electricity_related)) +
+    geom_col(position = "dodge") +
+    geom_text(aes(label = pct_share_lab), hjust = -0.1) +
+    scale_x_continuous(labels = scales::percent_format(), limits = c(NA, .2), breaks = c(0, .05, .1, .15)) +
+    scale_fill_brewer(palette = "Dark2") +
+    facet_grid(Electricity_related ~ treated, scales = "free_y") +
+    labs(
+        fill = "Electricity related job",
+        y = NULL,
+        x = "Share of total jobs"
+    ) +
+    theme(
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        plot.title = element_markdown(size = 32, family = "roboto"),
+        plot.subtitle = element_markdown(size = 18, family = "roboto"),
+        plot.title.position = "plot",
+        legend.position = "none",
+        text = element_text(family = "ibm", size = 18)
+    )
+
+ggsave(filename = here::here("replication-figures", "Figure-6.png"), device = "png", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+Figure 9
+
+
+```{r}
+df = read_rds(here::here("replication-data", "figure-7.rds"))
+
+# Creating the coefficient plot
+ggplot(df, aes(y = variable, x = coefficient)) +
+  geom_vline(xintercept = 0, color = "gray20", linetype = "dashed") +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower_ci, xmax = upper_ci), height = 0.2) +
+  theme_minimal() +
+  labs(x = "Magnitude of Regression Coefficient for\nVariable Interacted with Birth Parish (Treated)", y = "Variable Interacted with Birth Parish (Treated)") +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    
+    plot.title = element_markdown(size = 32, family = 'roboto'),
+    plot.title.position = "plot",
+    text = element_text(family = 'ibm', size = 18)
+  ) 
+
+```

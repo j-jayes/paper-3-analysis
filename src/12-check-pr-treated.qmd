@@ -1,0 +1,99 @@
+---
+title: "Untitled"
+format: html
+---
+
+We want to check if treatment is correlated with inclusion in the sample.
+
+In other words, we know the 1930 census is not complete, how many parishes are there in the possible sample, and how many in the census 1930. 
+
+
+What do we care about?
+
+How many parishes are there that could be treated in the sample, and how many are treated in the sample.
+
+There are 
+
+```{r}
+library(tidyverse)
+
+df <- readxl::read_excel("data/parishes/treated_parishes_with_distance_threshold_and_population.xlsx")
+
+
+n_parishes_total = df %>% 
+filter(distance_to_line <= 300) %>% 
+distinct(parish_code)  %>% 
+count() %>% 
+pull()
+
+n_possible_treated 
+
+df %>% 
+filter(distance_to_line <= 300) %>% 
+filter(treated == 1) %>%
+distinct(parish_code)  %>% 
+count() %>% 
+pull()
+
+df %>% 
+filter(distance_to_line <= 300) %>% 
+filter(treated == 1) %>%
+distinct(parish_code)  %>% 
+count() %>% 
+pull()
+
+
+```
+
+
+
+```{r}
+library(sf)
+parishes_subset_treated <- st_read(here::here("data", "maps", "parishes_subset_treated.shp"))
+
+parishes_subset_control <- st_read(here::here("data", "maps", "parishes_subset_control.shp"))
+
+parishes_subset_treated %>% 
+filter(!is.na(geom_id))  %>% 
+as_tibble() %>%  View()
+distinct(geom_id) %>%
+count()
+
+parishes_subset_control %>% 
+filter(!is.na(geom_id)) %>% 
+as_tibble() %>% 
+count()
+```
+
+Now what is in the 1930 census?
+
+```{r}
+library(arrow)
+
+# read in data from census_1930_excl_unbalanced_controls.parquet
+df_census = read_parquet(here::here("data", "census", "census_1930_excl_unbalanced_controls.parquet"))
+
+df_census %>% 
+filter(birth_parish_treated == 1) %>% 
+count(birth_parish_ref_code)
+
+df_census %>%
+filter(birth_parish_treated == 0) %>%
+count(birth_parish_ref_code)
+
+df_census %>% 
+filter(current_parish_treated == 1) %>% 
+count(current_parish_ref_code)
+
+df_census %>%
+filter(current_parish_treated == 0) %>%
+count(current_parish_ref_code)
+```
+
+
+```{r}
+prob_treated_total = 215 / (1802 + 215)
+
+prob_treated_sample = 46 / (656 + 46)
+
+```

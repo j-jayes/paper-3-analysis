@@ -28,8 +28,14 @@ coeff_data <- coeff_data %>%
   mutate(lower_ci = coefficient - 1.96 * std_error,
          upper_ci = coefficient + 1.96 * std_error)
 
+
+coeff_data %>% write_rds(here::here("replication-data", "figure-7.rds"))
+
+
+df = read_rds(here::here("replication-data", "figure-7.rds"))
+
 # Creating the coefficient plot
-ggplot(coeff_data, aes(y = variable, x = coefficient)) +
+ggplot(df, aes(y = variable, x = coefficient)) +
   geom_vline(xintercept = 0, color = "gray20", linetype = "dashed") +
   geom_point() +
   geom_errorbarh(aes(xmin = lower_ci, xmax = upper_ci), height = 0.2) +

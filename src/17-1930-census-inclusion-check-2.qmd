@@ -1,0 +1,206 @@
+---
+title: "Untitled"
+format: html
+---
+
+You could do balance checks using the 1900 census, say, to see whether the probability of inclusion in the 1930 sample varies systematically by population, employment, economic structure, etc., which would be more reassuring.
+
+
+```{r}
+library(tidyverse)
+library(here)
+df_balance <- readxl::read_excel(here::here("data", "balance-tests", "filtered_data_with_distances_balanced.xlsx")) %>%
+    select(-1)
+
+df_balance <- df_balance %>% filter(year == 1900)
+
+df_balance %>% view()
+```
+
+
+```{r}
+library(arrow)
+df <- read_parquet(here("data/census/census_1930_excl_unbalanced_controls.parquet"))
+
+df %>%
+    select(current_parish_ref_code) %>%
+    distinct()
+
+df_included_codes <- df %>%
+    filter(birth_parish_distance_to_line <= 300) %>%
+    select(birth_parish_ref_code) %>%
+    distinct() %>%
+    mutate(parish_code = as.numeric(str_remove(birth_parish_ref_code, "SE/"))) %>% 
+    mutate(included_1930 = 1) %>% 
+    select(-birth_parish_ref_code)
+
+df_included_codes_current <- df %>%
+    filter(current_parish_distance_to_line <= 300) %>%
+    select(current_parish_ref_code) %>%
+    distinct() %>%
+    mutate(parish_code = as.numeric(str_remove(current_parish_ref_code, "SE/"))) %>% 
+    mutate(included_1930 = 1) %>% 
+    select(-current_parish_ref_code)
+```
+
+
+
+```{r}
+df_included_codes_regression <- df_balance %>%
+    left_join(df_included_codes, by = c("parish_code")) %>%
+    filter(!is.na(shc1)) %>%
+    mutate(included_1930 = case_when(
+        is.na(included_1930) ~ 0,
+        TRUE ~ included_1930
+    ))
+
+df_included_codes_regression %>%
+    lm(included_1930 ~ shc1 + shc2 + shc3 + shc4 + shc5 + shc6 + shc7 + llabforce, data = .) %>%
+    summary()
+
+df_included_codes_regression %>%
+    select(parish_name_x, parish_code, contains("shc"), llabforce, included_1930) %>%
+    write_csv(here("data", "balance-tests", "included_1930.csv"))
+
+
+df_included_current_codes_regression <- df_balance %>%
+    left_join(df_included_codes_current, by = c("parish_code")) %>%
+    filter(!is.na(shc1)) %>%
+    mutate(included_1930 = case_when(
+        is.na(included_1930) ~ 0,
+        TRUE ~ included_1930
+    ))
+
+df_included_current_codes_regression %>%
+    lm(included_1930 ~ shc1 + shc2 + shc3 + shc4 + shc5 + shc6 + shc7 + llabforce, data = .) %>%
+    summary()
+
+
+
+
+
+
+
+library(histmaps)
+
+p_map <- histmaps::get_boundaries(1930, "parish")
+
+p_map %>%
+    mutate(parish_code = as.numeric(str_remove(ref_code, "SE/"))) %>%
+    left_join(df_included_current_codes_regression, by = c("parish_code")) %>%
+    ggplot(aes(fill = included_1930)) +
+    geom_sf() +
+    scale_fill_viridis_c() +
+    theme_minimal()
+```
+
+
+
+Here we try again.
+
+
+```{r}
+library(arrow)
+df_census_1930 <- read_parquet("data/census/df_ref.parquet")
+
+parishes_1930 <- df_census_1930 %>%
+    select(scbkod, arkbild) %>%
+    distinct() %>%
+    arrange(scbkod) %>% 
+    rename(parish_code_short = scbkod, parish_name_1930 = arkbild) 
+```
+
+So there are 1,165 parishes in the 1930 census, as currently digitized.
+
+
+```{r}
+library(haven)
+parish_characteristics <- read_dta("data/balance-tests/data Figure 2 and Table A2.dta")
+
+parish_characteristics_1900 <- parish_characteristics %>%
+    filter(year == 1900) %>% 
+    select(parish_name_1900 = parish_name, parish_code, contains("shc"), llabforce)
+```
+
+There are 2,447 parishes for which we have information in 1900. 
+
+Now we join them together. 
+
+```{r}
+parish_characteristics_1900 <- parish_characteristics_1900 %>%
+    mutate(parish_code_short = as.numeric(str_sub(parish_code, end = -4)))
+```
+
+
+```{r}
+parish_characteristics_1900 %>% left_join(parishes_1930, by = c("parish_code_short"))
+```
+
+
+```{r}
+parishes_1930 %>% filter(parish_code_short == 158201) %>% view()
+```
+
+So the problem that we run into is that there are multiple short parish codes that correspond to different parish names. There are 14 such cases, with a total of 31 different names. We need to manually map these to a longer code to avoid a mismatch.
+
+```{r}
+parishes_1930 %>% count(parish_code_short, sort = T) %>% filter(n > 1) %>% view()
+```
+
+
+```{r}
+parishes_to_manually_match <- parishes_1930 %>% count(parish_code_short, sort = T) %>% filter(n > 1) 
+```
+
+
+Here we manually match the parish codes to the correct parish names.
+
+```{r}
+parishes_1930 %>%
+    filter(parish_code_short %in% parishes_to_manually_match$parish_code_short) %>% 
+    arrange(parish_code_short)
+
+
+```
+
+
+38100 Arnö and Vårfrukyrka
+
+```{r}
+parish_characteristics_1900 %>% filter(parish_code_short == 38100)
+parish_characteristics_1900 %>% filter(str_detect(parish_name_1900, "Vårfrukyrka"))
+```
+
+No result.
+
+56202 Hällestad and Hägerstad
+
+```{r}
+parish_characteristics_1900 %>% filter(parish_code_short == 56202)
+parish_characteristics_1900 %>% filter(str_detect(parish_name_1900, "Hällestad"))
+```
+
+Hägerstad exists in 1900 dataset as 
+
+
+Wait, we don't have to get an exact match , all we need to know is that there is a parish which matches. 
+
+```{r}
+parishes_1930_to_join <- parishes_1930 %>% group_by(parish_code_short) %>% slice(1) %>% ungroup()
+
+parish_characteristics_1900 %>%
+    left_join(parishes_1930_to_join, by = c("parish_code_short")) %>% 
+    mutate(included_1930 = case_when(
+        is.na(parish_name_1930) ~ 0,
+        TRUE ~ 1
+    )) %>% write_dta(here("data", "balance-tests", "included_1930.dta"))
+    lm(included_1930 ~ shc1 + shc2 + shc3 + shc4 + shc5 + shc6 + shc7 + llabforce, data = .)  %>% 
+    summary()
+```
+
+
+
+
+```{r}
+
+```

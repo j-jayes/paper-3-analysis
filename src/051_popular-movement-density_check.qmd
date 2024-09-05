@@ -1,0 +1,166 @@
+---
+title: "Untitled"
+format: html
+---
+
+What we want to do is aggregate the number of union members by parish and year, then join to population, then get the unionization rate.
+
+First we will read in the data and take a look at it.
+
+```{r}
+library(tidyverse)
+
+df_union_membership <- readxl::read_excel("data/parishes/union_membership_and_treated_groups_merged.xlsx")
+
+
+df_union_membership_sum <- df_union_membership %>% 
+filter(type_of_organization == "FACKF") %>% 
+select(parish_code, parish_name, contains("n_members"))  %>% 
+pivot_longer(cols = contains("n_members"), names_to = "year", values_to = "n_members")  %>% 
+mutate(year = parse_number(year)) %>% 
+group_by(parish_code, parish_name, year) %>%
+mutate(total_members = sum(n_members, na.rm = TRUE))  %>% 
+ungroup()  %>% 
+mutate(total_members = case_when(
+    total_members == 0 ~ NA_real_,
+    TRUE ~ total_members
+)) 
+
+
+df_union_membership_sum <- df_union_membership_sum %>% 
+select(-n_members) %>%
+distinct()
+
+
+df_union_membership_sum_grouped <- df_union_membership_sum %>% 
+mutate(year_group = case_when(
+    between(year, 1896, 1905) ~ 1900,
+    between(year, 1906, 1915) ~ 1910,
+    between(year, 1926, 1935) ~ 1930,
+    TRUE ~ NA_real_
+)) %>% 
+filter(!is.na(year_group)) %>%
+group_by(parish_code, parish_name, year_group) %>%
+summarise(total_members = sum(total_members, na.rm = TRUE))   %>% 
+ungroup()  %>%
+mutate(total_members = case_when(
+    total_members == 0 ~ NA_real_,
+    TRUE ~ round(total_members / 10)
+))  
+
+df_union_membership_wide <- df_union_membership_sum_grouped %>% pivot_wider(names_from = year_group, values_from = total_members, names_prefix = "n_members_") 
+
+```
+
+
+Here is what was causing the problem:
+
+```{r}
+
+df_population <- readxl::read_excel("data/parishes/treated_parishes_with_distance_threshold_and_population.xlsx")
+
+df_population %>% filter(str_detect(parish_code, "188003"))  %>% distinct() %>% view()
+
+df_population %>% filter(str_detect(parish_code, "188502"))  %>% distinct() %>% view()
+
+```
+
+
+Parish Population Data
+
+Here the problem was that we didn't have a one to one match between the parishes in 1930 and 1900. The parishes were divided up into smaller units in 1900 and 1910. We need to aggregate the population data for 1900 and 1910 to the same level as the 1930 data. That is what we do below.
+
+
+
+Lets now try to get rid of errors with the 1930 population data.
+
+
+```{r}
+df_population <- readxl::read_excel("data/parishes/treated_parishes_with_distance_threshold_and_population.xlsx")
+
+
+df_population <- df_population %>%
+    filter(!is.na(population_1930)) %>%
+    rename(parish_code_long = parish_code) %>%
+    mutate(
+        parish_code = str_remove(parish_code_long, "SE/"),
+        # remove the last three characters from parish_code
+        parish_code = str_sub(parish_code, 1, nchar(parish_code) - 3),
+        parish_code = as.numeric(parish_code)
+    ) %>%
+    group_by(parish_code) %>%
+    mutate(
+        population_1900 = sum(population_1900),
+        population_1910 = sum(population_1910)
+    ) %>%
+    ungroup() %>%
+    select(-parish_code_long, -parish_name) %>%
+    distinct() %>%
+    group_by(parish_code) %>%
+    slice_min(order_by = distance_to_line, n = 1) %>%
+    ungroup()
+
+
+df_population <- df_population %>% mutate(
+    avg_pop_1900_1910 = (population_1900 + population_1910) / 2,
+    pop_1930_diff = abs(population_1930 - avg_pop_1900_1910),
+    pop_1930_diff_flag = case_when(
+        pop_1930_diff / avg_pop_1900_1910 > 0.3 ~ 1,
+        TRUE ~ 0
+    ),
+    population_1930_corrected = case_when(
+        pop_1930_diff_flag == 1 ~ avg_pop_1900_1910,
+        TRUE ~ population_1930
+    )
+)
+
+
+
+df_union_membership <- df_population %>%
+    inner_join(df_union_membership_wide, by = "parish_code") %>%
+    mutate(
+        unionization_rate_1900 = n_members_1900 / population_1900,
+        unionization_rate_1910 = n_members_1910 / population_1910,
+        unionization_rate_1930 = n_members_1930 / population_1930_corrected
+    )
+
+
+library(gt)
+
+table <- df_union_membership %>%
+    group_by(treated) %>%
+    summarise(
+        unionization_rate_1900 = mean(unionization_rate_1900, na.rm = TRUE),
+        unionization_rate_1910 = mean(unionization_rate_1910, na.rm = TRUE),
+        unionization_rate_1930 = mean(unionization_rate_1930, na.rm = TRUE)
+    ) %>%
+    pivot_longer(cols = contains("unionization_rate"), names_to = "year", values_to = "unionization_rate") %>%
+    mutate(
+        treated = case_when(
+            treated == 1 ~ "Treated",
+            TRUE ~ "Control"
+        ),
+        year = parse_number(year)
+    ) %>%
+    group_by(year) %>%
+    mutate(ratio = unionization_rate / lag(unionization_rate)) %>%
+    gt() %>%
+    fmt_percent(columns = vars(unionization_rate), decimals = 2) %>%
+    fmt_number(columns = vars(ratio), decimals = 2) %>%
+    tab_header(
+        title = md("**Union density by treatment status and year**"),
+        subtitle = md("Mean union density is calculated by averaging the number of union members in a 10 year window divided by population from census in year")
+    ) %>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_row_groups()
+    ) 
+
+df_union_membership %>% count(treated)
+
+df_union_membership %>% view()
+
+table %>% 
+    gtsave(here::here("figures", "union_density_treatment_and_control_by_year_check.png"))
+
+

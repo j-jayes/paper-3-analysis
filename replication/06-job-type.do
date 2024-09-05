@@ -27,13 +27,13 @@ global results_dir "results/regressions"
 *** Regression 1: employment as dependent variable.
 
 * Regression for electricity_job_direct with birth_parish_treated only
-reg electricity_job_direct birth_parish_treated, robust
+reg electricity_job_direct birth_parish_treated, vce(cluster birth_parish_ref_code)
 
 * Adding age and age squared and female
-reg electricity_job_direct birth_parish_treated age age_2 female, robust
+reg electricity_job_direct birth_parish_treated age age_2 female, vce(cluster birth_parish_ref_code)
 
 * Adding marital status and schooling
-reg electricity_job_direct birth_parish_treated age age_2 female i.marital i.schooling, robust
+reg electricity_job_direct birth_parish_treated age age_2 female i.marital i.schooling, vce(cluster birth_parish_ref_code)
 
 *--------------------------------------------------*
 * Indirect Electricity Jobs						   *
@@ -42,10 +42,10 @@ reg electricity_job_direct birth_parish_treated age age_2 female i.marital i.sch
 *** Regression 1: employment as dependent variable.
 
 * Regression for electricity_job_indirect with birth_parish_treated only
-reg electricity_job_indirect birth_parish_treated, robust
+reg electricity_job_indirect birth_parish_treated, vce(cluster birth_parish_ref_code)
 
 * Adding age and age squared and female
-reg electricity_job_indirect birth_parish_treated age age_2 female, robust
+reg electricity_job_indirect birth_parish_treated age age_2 female, vce(cluster birth_parish_ref_code)
 
 * Adding marital status and schooling
-reg electricity_job_indirect birth_parish_treated age age_2 female i.marital i.schooling, robust
+reg electricity_job_indirect birth_parish_treated age age_2 female i.marital i.schooling, vce(cluster birth_parish_ref_code)

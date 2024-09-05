@@ -82,6 +82,11 @@ local varlist: subinstr local varlist "log_wealth" "", all
 local varlist: subinstr local varlist "hisclass" "", all
 local varlist: subinstr local varlist "log_income" "", all
 local varlist: subinstr local varlist "occ_title_without_income" "", all
+local varlist: subinstr local varlist "union_density_1890" "", all
+local varlist: subinstr local varlist "union_density_1900" "", all
+local varlist: subinstr local varlist "union_density_1910" "", all
+local varlist: subinstr local varlist "union_density_1930" "", all
+
 
 * Create an indicator for any missing value across all variables
 egen anymissing = rmiss(`varlist')

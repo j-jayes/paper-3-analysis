@@ -6,3 +6,8 @@ data/*
 config.yml
 .venv/*
 /.luarc.json
+
+.env
+env.txt
+
+data/1900-1910 census/*

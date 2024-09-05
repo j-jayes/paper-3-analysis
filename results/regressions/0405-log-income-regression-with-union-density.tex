@@ -1,0 +1,78 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{3}{c}}
+\hline\hline
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+                    &\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}&\multicolumn{1}{c}{Log Income}\\
+                    &        b/se         &        b/se         &        b/se         \\
+\hline
+Birth Parish (Treated)=0&       0.000         &       0.000         &       0.000         \\
+                    &         (.)         &         (.)         &         (.)         \\
+Birth Parish (Treated)=1&       0.269\sym{***}&       0.274\sym{***}&       0.302\sym{***}\\
+                    &      (0.05)         &      (0.06)         &      (0.07)         \\
+log\_union\_density\_1900&       0.415\sym{***}&                     &                     \\
+                    &      (0.03)         &                     &                     \\
+Birth Parish (Treated)=0 $\times$ log\_union\_density\_1900&       0.000         &                     &                     \\
+                    &         (.)         &                     &                     \\
+Birth Parish (Treated)=1 $\times$ log\_union\_density\_1900&      -0.153\sym{*}  &                     &                     \\
+                    &      (0.06)         &                     &                     \\
+Age                 &       0.172\sym{***}&       0.172\sym{***}&       0.172\sym{***}\\
+                    &      (0.00)         &      (0.00)         &      (0.00)         \\
+Age Squared         &      -0.002\sym{***}&      -0.002\sym{***}&      -0.002\sym{***}\\
+                    &      (0.00)         &      (0.00)         &      (0.00)         \\
+Female (1 = Yes 0 = No)&      -1.635\sym{***}&      -1.642\sym{***}&      -1.609\sym{***}\\
+                    &      (0.05)         &      (0.05)         &      (0.05)         \\
+Divorced            &       0.000         &       0.000         &       0.000         \\
+                    &         (.)         &         (.)         &         (.)         \\
+Married             &       1.110\sym{***}&       1.120\sym{***}&       1.088\sym{***}\\
+                    &      (0.07)         &      (0.07)         &      (0.07)         \\
+Other               &      -0.557         &      -0.408         &      -0.459         \\
+                    &      (1.29)         &      (1.30)         &      (1.33)         \\
+Unmarried           &       0.569\sym{***}&       0.582\sym{***}&       0.555\sym{***}\\
+                    &      (0.07)         &      (0.07)         &      (0.07)         \\
+Widow/Widower       &       0.260\sym{***}&       0.264\sym{***}&       0.225\sym{**} \\
+                    &      (0.07)         &      (0.07)         &      (0.07)         \\
+Literate            &       0.000         &       0.000         &       0.000         \\
+                    &         (.)         &         (.)         &         (.)         \\
+Post primary schooling&       0.839\sym{***}&       0.808\sym{***}&       0.853\sym{***}\\
+                    &      (0.06)         &      (0.06)         &      (0.06)         \\
+Post-secondary and university&       1.083\sym{***}&       1.033\sym{***}&       1.085\sym{***}\\
+                    &      (0.08)         &      (0.08)         &      (0.08)         \\
+Primary school      &       0.305\sym{***}&       0.284\sym{***}&       0.313\sym{***}\\
+                    &      (0.05)         &      (0.05)         &      (0.06)         \\
+Elite               &       0.000         &       0.000         &       0.000         \\
+                    &         (.)         &         (.)         &         (.)         \\
+Farmers and fishermen&      -1.168\sym{***}&      -1.026\sym{***}&      -1.110\sym{***}\\
+                    &      (0.05)         &      (0.05)         &      (0.05)         \\
+Foremen             &      -0.626\sym{***}&      -0.577\sym{***}&      -0.600\sym{***}\\
+                    &      (0.04)         &      (0.04)         &      (0.04)         \\
+Low-skilled workers &      -1.190\sym{***}&      -1.145\sym{***}&      -1.182\sym{***}\\
+                    &      (0.05)         &      (0.05)         &      (0.05)         \\
+Medium-skilled workers&      -0.832\sym{***}&      -0.805\sym{***}&      -0.790\sym{***}\\
+                    &      (0.05)         &      (0.05)         &      (0.05)         \\
+Unskilled workers   &      -1.521\sym{***}&      -1.436\sym{***}&      -1.482\sym{***}\\
+                    &      (0.05)         &      (0.05)         &      (0.05)         \\
+White collar        &      -0.104\sym{**} &      -0.089\sym{*}  &      -0.081\sym{*}  \\
+                    &      (0.04)         &      (0.04)         &      (0.04)         \\
+log\_union\_density\_1910&                     &       0.355\sym{***}&                     \\
+                    &                     &      (0.02)         &                     \\
+Birth Parish (Treated)=0 $\times$ log\_union\_density\_1910&                     &       0.000         &                     \\
+                    &                     &         (.)         &                     \\
+Birth Parish (Treated)=1 $\times$ log\_union\_density\_1910&                     &      -0.098\sym{*}  &                     \\
+                    &                     &      (0.04)         &                     \\
+log\_union\_density\_1930&                     &                     &       0.218\sym{***}\\
+                    &                     &                     &      (0.01)         \\
+Birth Parish (Treated)=0 $\times$ log\_union\_density\_1930&                     &                     &       0.000         \\
+                    &                     &                     &         (.)         \\
+Birth Parish (Treated)=1 $\times$ log\_union\_density\_1930&                     &                     &      -0.049         \\
+                    &                     &                     &      (0.04)         \\
+Constant            &       3.209\sym{***}&       3.034\sym{***}&       3.010\sym{***}\\
+                    &      (0.12)         &      (0.12)         &      (0.11)         \\
+\hline
+R-squared           &        0.27         &        0.27         &        0.27         \\
+Observations        &      506071         &      506071         &      506071         \\
+F-stat              &    2226.800         &    2312.900         &    2345.461         \\
+\hline\hline
+\multicolumn{4}{l}{\footnotesize Clustered standard errors in parentheses}\\
+\end{tabular}
+}

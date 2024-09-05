@@ -1,0 +1,72 @@
+*--------------------------------------------------*
+* Income Regressions: log_income as Dependent Var  *
+*--------------------------------------------------*
+
+* Set the environment
+clear all
+set more off 
+
+* Setting the working directory
+* cd "C:\Users\User\Documents\Recon\paper-3-analysis"
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
+
+
+* Load the dataset created by the 'set_dataset_params.do' script
+use "data/census/1930_census_regression_dataset_params_set.dta"
+
+* Drop observations where the individual is not employed
+drop if employed == 0
+
+* Define the results directory for storing output
+global results_dir "results/regressions/"
+
+tabulate marital, generate(marital_) // 5
+tabulate schooling, generate(schooling_) // 4
+tabulate hisclass, generate(hisclass_) // 7
+
+
+// oaxaca log_income age age_2 female, by(birth_parish_treated) pooled vce(cluster birth_parish_ref_code)
+
+
+oaxaca log_income age age_2 female marital_1 marital_2 marital_3 marital_4 marital_5 ///
+ schooling_1 schooling_2 schooling_3 schooling_4 ///
+ hisclass_1 hisclass_2 hisclass_3 hisclass_4 hisclass_5 hisclass_6 hisclass_7 ///
+ , by(birth_parish_treated) pooled vce(cluster birth_parish_ref_code) swap
+ 
+ 
+ 
+// Now we drop reference groups, the unmarried (marital_4) the literate (schooling_1), the low-skilled workers (hisclass_4)
+
+oaxaca log_income age age_2 female marital_1 marital_2 marital_3 marital_5 ///
+  schooling_2 schooling_3 schooling_4 ///
+ hisclass_1 hisclass_2 hisclass_3 hisclass_5 hisclass_6 hisclass_7 ///
+ , by(current_parish_treated) pooled vce(cluster birth_parish_ref_code) swap
+ 
+ 
+ 
+// Same as above, but detailed 
+
+oaxaca log_income age age_2 female marital_1 marital_2 marital_3 marital_5 ///
+  schooling_2 schooling_3 schooling_4 ///
+ hisclass_1 hisclass_2 hisclass_3 hisclass_5 hisclass_6 hisclass_7 ///
+ , by(current_parish_treated) pooled vce(cluster birth_parish_ref_code) d swap
+ 
+ 
+// Same as above, but detailed 
+
+oaxaca log_income ///
+ hisclass_1 hisclass_2 hisclass_3 hisclass_5 hisclass_6 hisclass_7 ///
+ , by(birth_parish_treated) pooled vce(cluster birth_parish_ref_code) d swap
+ 
+ 
+ 
+// Same as above, but detailed 
+
+oaxaca log_income age age_2 female marital_1 marital_2 marital_3 marital_5 ///
+  schooling_2 schooling_3 schooling_4 ///
+ hisclass_1 hisclass_2 hisclass_3 hisclass_5 hisclass_6 hisclass_7 ///
+ , by(current_parish_treated) pooled vce(cluster birth_parish_ref_code) d swap
+ 
+
+ 
+

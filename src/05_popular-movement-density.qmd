@@ -10,7 +10,7 @@ Calculate the density of popular unions in parishes in years 1900, 1910 and 1930
 ```{r}
 library(tidyverse)
 
-df <- readxl::read_excel(here::here("data", "parishes", "union_membership_and_treated_groups_merged.xlsx"), sheet = 2)
+df <- readxl::read_excel(here::here("data", "parishes", "union_membership_and_treated_groups_merged.xlsx"))
 
 df_2 <- df %>%
   select(parish_code, type_of_organization, contains("population_"), contains("n_members_")) %>%

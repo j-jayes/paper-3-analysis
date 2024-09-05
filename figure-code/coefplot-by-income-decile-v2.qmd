@@ -5,7 +5,15 @@
 # Load necessary library
 library(tidyverse)
 theme_set(theme_light())
+library(ggtext)
+library(showtext)
+theme_set(theme_light())
 
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
 # Data
 
 # deciles go from 5 to 95 by 5
@@ -21,14 +29,13 @@ print(data_tibble)
 
 df = data_tibble %>% janitor::clean_names()
 
-df
+# df %>% write_rds(here::here("replication-data", "figure-4.rds"))
 ```
 
 
 
 
 ```{r}
-
 # Create the plot
 df %>%
   ggplot(aes(decile, coefficient)) +
@@ -42,12 +49,47 @@ df %>%
     y = "Magnitude of regression coefficient",
     # title = "Coefficients from quantile regression",
     # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nNote that the scale on the y-axis is not the same.\nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = "ibm", size = 18)
   )
 
 
 ggsave(filename = here::here("figures/04-coefficient-plot-treated-by-income.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
 ```
 
+For use in Vox CEPR Column
+
+```{r}
+# Create the plot
+df %>%
+  ggplot(aes(decile, coefficient)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_errorbar(aes(ymin = coefficient - 1.96 * standard_error, ymax = coefficient + 1.96 * standard_error), width = 2, colour = "#d95f02") +
+  geom_line(colour = "#d95f02") +
+  geom_point(cex = 3, colour = "#d95f02") +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Log-income premium for individuals\nborn with early access to electricity",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nNote that the scale on the y-axis is not the same.\nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "none",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+
+ggsave(filename = here::here("figures/vox_cepr_blog_post_plot.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
 
 
 ```{r}
@@ -65,7 +107,7 @@ data <- tibble(
 data <- data %>% rename(Coefficient = b, Standard_Error = se, Lower = ll, Upper = ul)
 
 # add a column and call it "estimator" and fill it with the value "Unconditional"
-data <- data %>% mutate(Estimator = "Unconditional QR")
+data <- data %>% mutate(Estimator = "Residualized QR")
 
 # add a column called decile and fill it with the values 5, 15, 25, 35, 45, 55, 65, 75, 85
 data <- data %>% mutate(decile = c(5, 15, 25, 35, 45, 55, 65, 75, 85)) %>% 
@@ -82,18 +124,27 @@ data_combined <- bind_rows(data, df)
 
 # recreate the plot above
 data_combined %>%
-  ggplot(aes(decile, coefficient, colour = estimator)) +
+  mutate(estimator = fct_relevel(estimator, "Residualized QR", "Conditional QR")) %>%
+  ggplot(aes(decile, coefficient, colour = estimator, lty = estimator, shape = estimator)) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 2) +
   geom_line() +
   geom_point(cex = 3) +
   scale_colour_brewer(palette = "Dark2") +
   scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  scale_linetype_manual(values = c("Conditional QR" = "solid", "Residualized QR" = "dashed")) +
   theme(legend.position = "bottom") +
   labs(
     x = "Percentile of the income distribution",
     y = "Magnitude of regression coefficient",
     colour = "Estimator"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
   )
 
 ggsave(filename = here::here("figures/041-coefficient-plot-treated-by-income-and-estimator.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
@@ -329,7 +380,7 @@ all_data <- bind_rows(baseline_data, all_year_data) %>%
   filter(year != "Baseline")
 
 # Create a facet plot
-ggplot(all_data, aes(x = decile, y = coefficient, color = Variable)) +
+ggplot(all_data, aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
   geom_line() +
   geom_point(cex = 2, alpha = .8) +
   geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
@@ -344,10 +395,643 @@ ggplot(all_data, aes(x = decile, y = coefficient, color = Variable)) +
     y = "Magnitude of regression coefficient",
     # title = "Coefficients from quantile regression",
     # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
   )
 
 ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
 
 
+all_data %>% 
+write_csv(here::here("data/081-union-density-effect-5th-95th-percentiles.csv"))
 
+```
+
+
+
+Redo this with new data based on better matching
+
+
+
+```{r}
+
+# Coefficients for 1900
+coefficients_1900 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.523, 0.585, -0.294),
+  `25` = c(0.235, 0.353, -0.159),
+  `35` = c(0.164, 0.283, -0.122),
+  `45` = c(0.118, 0.211, -0.088),
+  `55` = c(0.097, 0.175, -0.076),
+  `65` = c(0.076, 0.147, -0.058),
+  `75` = c(0.057, 0.129, -0.045),
+  `85` = c(0.032, 0.108, -0.026),
+  `95` = c(0.014, 0.098, -0.023)
+)
+
+# Standard Errors for 1900
+standard_errors_1900 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `05` = c(0.01114, 0.00442, 0.00885),
+  `15` = c(0.09783, 0.03664, 0.07423),
+  `25` = c(0.03637, 0.02207, 0.04028),
+  `35` = c(0.02806, 0.02021, 0.03352),
+  `45` = c(0.02240, 0.01518, 0.02521),
+  `55` = c(0.02239, 0.01317, 0.02360),
+  `65` = c(0.02224, 0.01229, 0.02658),
+  `75` = c(0.02358, 0.01123, 0.02565),
+  `85` = c(0.02470, 0.01130, 0.03137),
+  `95` = c(0.02377, 0.01250, 0.03446)
+)
+
+# Coefficients for 1910
+coefficients_1910 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1910_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1910_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.587, 0.535, -0.221),
+  `25` = c(0.250, 0.306, -0.108),
+  `35` = c(0.157, 0.254, -0.080),
+  `45` = c(0.122, 0.200, -0.066),
+  `55` = c(0.106, 0.172, -0.060),
+  `65` = c(0.085, 0.150, -0.049),
+  `75` = c(0.065, 0.135, -0.037),
+  `85` = c(0.039, 0.116, -0.028),
+  `95` = c(0.028, 0.093, -0.028)
+)
+
+
+# Standard Errors for 1910
+standard_errors_1910 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1910_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1910_FA"),
+  `05` = c(0.01228, 0.00260, 0.00672),
+  `15` = c(0.13945, 0.03062, 0.06609),
+  `25` = c(0.03601, 0.01567, 0.02184),
+  `35` = c(0.02776, 0.01324, 0.01876),
+  `45` = c(0.02153, 0.00999, 0.01529),
+  `55` = c(0.02176, 0.00873, 0.01465),
+  `65` = c(0.02340, 0.00780, 0.01558),
+  `75` = c(0.02376, 0.00766, 0.01720),
+  `85` = c(0.02386, 0.00827, 0.01951),
+  `95` = c(0.02850, 0.00959, 0.02291)
+)
+
+# Coefficients Data Frame
+coefficients_1930 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1930_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1930_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.596, 0.369, -0.128),
+  `25` = c(0.285, 0.206, -0.063),
+  `35` = c(0.178, 0.164, -0.039),
+  `45` = c(0.132, 0.128, -0.029),
+  `55` = c(0.112, 0.109, -0.026),
+  `65` = c(0.083, 0.094, -0.018),
+  `75` = c(0.058, 0.084, -0.012),
+  `85` = c(0.024, 0.068, -0.003),
+  `95` = c(0.008, 0.046, 0.001)
+)
+
+# Standard Errors Data Frame
+standard_errors_1930 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1930_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1930_FA"),
+  `05` = c(0.01354, 0.00166, 0.00496),
+  `15` = c(0.16343, 0.02709, 0.06382),
+  `25` = c(0.04325, 0.01322, 0.01952),
+  `35` = c(0.03338, 0.01070, 0.01581),
+  `45` = c(0.02453, 0.00797, 0.01295),
+  `55` = c(0.02282, 0.00698, 0.01107),
+  `65` = c(0.02392, 0.00624, 0.01217),
+  `75` = c(0.02539, 0.00627, 0.01299),
+  `85` = c(0.02520, 0.00650, 0.01481),
+  `95` = c(0.03159, 0.00606, 0.01931)
+)
+
+
+
+```
+
+
+
+```{r}
+
+# Process each year's data
+data_1900 <- process_year(coefficients_1900, standard_errors_1900, 1900)
+data_1910 <- process_year(coefficients_1910, standard_errors_1910, 1910)
+data_1930 <- process_year(coefficients_1930, standard_errors_1930, 1930)
+
+# Combine all the data
+all_year_data <- bind_rows(data_1900, data_1910, data_1930) %>% 
+  mutate(year = as.character(year))
+
+# Process baseline data
+baseline_data <- process_baseline(coefficients_baseline, standard_errors_baseline)
+
+# Combine all data
+all_data <- bind_rows(baseline_data, all_year_data) %>%
+  mutate(
+    Variable = fct_relevel(Variable, "Union density"),
+    Variable = fct_relevel(Variable, "Treated"),
+    year = fct_relevel(year, "Baseline")
+  ) %>% as_tibble() %>% 
+  filter(year != "Baseline")
+
+# Create a facet plot
+ggplot(all_data, aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
+  geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
+  facet_grid(year ~ .) +
+  theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles_v3.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+
+
+
+
+Redo this with new data based on better matching and standardized coefficients
+
+
+
+```{r}
+
+# Coefficients for 1900 with updated data
+coefficients_1900 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.182, 0.124, -0.105),
+  `25` = c(0.091, 0.095, -0.080),
+  `35` = c(0.066, 0.078, -0.063),
+  `45` = c(0.054, 0.064, -0.054),
+  `55` = c(0.047, 0.056, -0.048),
+  `65` = c(0.039, 0.051, -0.043),
+  `75` = c(0.033, 0.046, -0.039),
+  `85` = c(0.026, 0.041, -0.035),
+  `95` = c(0.021, 0.038, -0.031)
+)
+
+# Standard Errors for 1900 with updated data
+standard_errors_1900 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `05` = c(0.00351, 0.00078, 0.00128),
+  `15` = c(0.03398, 0.00991, 0.01345),
+  `25` = c(0.01408, 0.00487, 0.01089),
+  `35` = c(0.01110, 0.00528, 0.00775),
+  `45` = c(0.00892, 0.00369, 0.00537),
+  `55` = c(0.00820, 0.00303, 0.00495),
+  `65` = c(0.00777, 0.00260, 0.00686),
+  `75` = c(0.00866, 0.00276, 0.00527),
+  `85` = c(0.01049, 0.00325, 0.00878),
+  `95` = c(0.01941, 0.00397, 0.02994)
+)
+
+# Coefficients for 1910
+coefficients_1910 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1910_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1910_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.162, 0.129, -0.046),
+  `25` = c(0.066, 0.080, -0.022),
+  `35` = c(0.046, 0.070, -0.020),
+  `45` = c(0.036, 0.054, -0.017),
+  `55` = c(0.031, 0.047, -0.015),
+  `65` = c(0.023, 0.041, -0.010),
+  `75` = c(0.017, 0.037, -0.008),
+  `85` = c(0.007, 0.034, -0.005),
+  `95` = c(0.004, 0.030, -0.008)
+)
+
+# Standard Errors for 1910
+standard_errors_1910 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1910_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1910_FA"),
+  `05` = c(0.00392, 0.00061, 0.00211),
+  `15` = c(0.03469, 0.00726, 0.01507),
+  `25` = c(0.01138, 0.00383, 0.00569),
+  `35` = c(0.00896, 0.00521, 0.00579),
+  `45` = c(0.00778, 0.00406, 0.00454),
+  `55` = c(0.00724, 0.00336, 0.00416),
+  `65` = c(0.00734, 0.00299, 0.00455),
+  `75` = c(0.00708, 0.00291, 0.00488),
+  `85` = c(0.00738, 0.00316, 0.00566),
+  `95` = c(0.00865, 0.00343, 0.00600)
+)
+
+# Coefficients Data Frame
+# Coefficients for 1930
+coefficients_1930 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1930_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1930_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.164, 0.105, -0.036),
+  `25` = c(0.070, 0.064, -0.015),
+  `35` = c(0.049, 0.057, -0.015),
+  `45` = c(0.040, 0.045, -0.013),
+  `55` = c(0.034, 0.040, -0.013),
+  `65` = c(0.028, 0.035, -0.011),
+  `75` = c(0.020, 0.032, -0.008),
+  `85` = c(0.015, 0.028, -0.008),
+  `95` = c(0.016, 0.023, -0.011)
+)
+
+# Standard Errors for 1930
+standard_errors_1930 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1930_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1930_FA"),
+  `05` = c(0.00399, 0.00055, 0.00184),
+  `15` = c(0.03826, 0.00654, 0.01545),
+  `25` = c(0.01367, 0.00412, 0.00579),
+  `35` = c(0.01123, 0.00501, 0.00582),
+  `45` = c(0.00911, 0.00412, 0.00531),
+  `55` = c(0.00876, 0.00359, 0.00483),
+  `65` = c(0.00842, 0.00328, 0.00517),
+  `75` = c(0.00914, 0.00320, 0.00588),
+  `85` = c(0.00967, 0.00337, 0.00645),
+  `95` = c(0.01158, 0.00333, 0.00665)
+)
+
+
+
+
+```
+
+
+
+```{r}
+
+# Process each year's data
+data_1900 <- process_year(coefficients_1900, standard_errors_1900, 1900)
+data_1910 <- process_year(coefficients_1910, standard_errors_1910, 1910)
+data_1930 <- process_year(coefficients_1930, standard_errors_1930, 1930)
+
+# Combine all the data
+all_year_data <- bind_rows(data_1900, data_1910, data_1930) %>% 
+  mutate(year = as.character(year))
+
+# Process baseline data
+baseline_data <- process_baseline(coefficients_baseline, standard_errors_baseline)
+
+# Combine all data
+all_data <- bind_rows(baseline_data, all_year_data) %>%
+  mutate(
+    Variable = fct_relevel(Variable, "Union density"),
+    Variable = fct_relevel(Variable, "Treated"),
+    year = fct_relevel(year, "Baseline")
+  ) %>% as_tibble() %>% 
+  filter(year != "Baseline")
+
+# Create a facet plot
+ggplot(all_data, aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
+  geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
+  facet_grid(year ~ .) +
+  theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles_v4.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+
+```{r}
+
+# Create a facet plot
+ggplot(all_data %>% filter(year != 1900), aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
+  geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
+  facet_grid(year ~ .) +
+  theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles_1910_1930_v9.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+Redo this with new data based on better matching and ALL standardized coefficients
+
+
+
+```{r}
+# Standardized Coefficients for 1900
+coefficients_1900 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.053, 0.124, -0.030),
+  `25` = c(0.026, 0.095, -0.023),
+  `35` = c(0.019, 0.078, -0.018),
+  `45` = c(0.016, 0.064, -0.015),
+  `55` = c(0.014, 0.056, -0.014),
+  `65` = c(0.011, 0.051, -0.012),
+  `75` = c(0.009, 0.046, -0.011),
+  `85` = c(0.007, 0.041, -0.010),
+  `95` = c(0.006, 0.038, -0.009)
+)
+
+# Standard Errors for 1900
+standard_errors_1900 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1900_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1900_FA"),
+  `05` = c(0.00101, 0.00078, 0.00037),
+  `15` = c(0.00981, 0.00991, 0.00388),
+  `25` = c(0.00406, 0.00487, 0.00314),
+  `35` = c(0.00320, 0.00528, 0.00224),
+  `45` = c(0.00257, 0.00369, 0.00155),
+  `55` = c(0.00237, 0.00303, 0.00143),
+  `65` = c(0.00224, 0.00260, 0.00198),
+  `75` = c(0.00250, 0.00276, 0.00152),
+  `85` = c(0.00303, 0.00325, 0.00254),
+  `95` = c(0.00560, 0.00397, 0.00864)
+)
+
+
+# Standardized Coefficients for 1910
+coefficients_1910 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1910_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1910_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.047, 0.129, -0.013),
+  `25` = c(0.019, 0.080, -0.006),
+  `35` = c(0.013, 0.070, -0.006),
+  `45` = c(0.010, 0.054, -0.005),
+  `55` = c(0.009, 0.047, -0.004),
+  `65` = c(0.007, 0.041, -0.003),
+  `75` = c(0.005, 0.037, -0.002),
+  `85` = c(0.002, 0.034, -0.001),
+  `95` = c(0.001, 0.030, -0.002)
+)
+
+# Standard Errors for 1910
+standard_errors_1910 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1910_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1910_FA"),
+  `05` = c(0.00113, 0.00061, 0.00061),
+  `15` = c(0.01001, 0.00726, 0.00435),
+  `25` = c(0.00328, 0.00383, 0.00164),
+  `35` = c(0.00259, 0.00521, 0.00167),
+  `45` = c(0.00225, 0.00406, 0.00131),
+  `55` = c(0.00209, 0.00336, 0.00120),
+  `65` = c(0.00212, 0.00299, 0.00131),
+  `75` = c(0.00204, 0.00291, 0.00141),
+  `85` = c(0.00213, 0.00316, 0.00163),
+  `95` = c(0.00250, 0.00343, 0.00173)
+)
+
+# Standardized Coefficients for 1930
+coefficients_1930 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1930_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1930_FA"),
+  `05` = c(0.000, 0.000, 0.000),
+  `15` = c(0.047, 0.105, -0.010),
+  `25` = c(0.020, 0.064, -0.004),
+  `35` = c(0.014, 0.057, -0.004),
+  `45` = c(0.012, 0.045, -0.004),
+  `55` = c(0.010, 0.040, -0.004),
+  `65` = c(0.008, 0.035, -0.003),
+  `75` = c(0.006, 0.032, -0.002),
+  `85` = c(0.004, 0.028, -0.002),
+  `95` = c(0.005, 0.023, -0.003)
+)
+
+# Standard Errors for 1930
+standard_errors_1930 <- data.frame(
+  Variable = c("Birth Parish (Treated) = 1", 
+               "popular_movement_density_1930_FA", 
+               "Birth Parish (Treated) = 1 × popular_movement_density_1930_FA"),
+  `05` = c(0.00115, 0.00055, 0.00053),
+  `15` = c(0.01104, 0.00654, 0.00446),
+  `25` = c(0.00395, 0.00412, 0.00167),
+  `35` = c(0.00324, 0.00501, 0.00168),
+  `45` = c(0.00263, 0.00412, 0.00153),
+  `55` = c(0.00253, 0.00359, 0.00139),
+  `65` = c(0.00243, 0.00328, 0.00149),
+  `75` = c(0.00264, 0.00320, 0.00170),
+  `85` = c(0.00279, 0.00337, 0.00186),
+  `95` = c(0.00334, 0.00333, 0.00192)
+)
+
+
+
+```
+
+
+
+```{r}
+
+# Process each year's data
+data_1900 <- process_year(coefficients_1900, standard_errors_1900, 1900)
+data_1910 <- process_year(coefficients_1910, standard_errors_1910, 1910)
+data_1930 <- process_year(coefficients_1930, standard_errors_1930, 1930)
+
+# Combine all the data
+all_year_data <- bind_rows(data_1900, data_1910, data_1930) %>% 
+  mutate(year = as.character(year))
+
+# Process baseline data
+baseline_data <- process_baseline(coefficients_baseline, standard_errors_baseline)
+
+# Combine all data
+all_data <- bind_rows(baseline_data, all_year_data) %>%
+  mutate(
+    Variable = fct_relevel(Variable, "Union density"),
+    Variable = fct_relevel(Variable, "Treated"),
+    year = fct_relevel(year, "Baseline")
+  ) %>% as_tibble() %>% 
+  filter(year != "Baseline")
+
+# Create a facet plot
+ggplot(all_data, aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
+  geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
+  facet_grid(year ~ .) +
+  theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient (standardized)",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles_v5.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+
+```{r}
+
+# Process each year's data
+data_1900 <- process_year(coefficients_1900, standard_errors_1900, 1900)
+data_1910 <- process_year(coefficients_1910, standard_errors_1910, 1910)
+data_1930 <- process_year(coefficients_1930, standard_errors_1930, 1930)
+
+# Combine all the data
+all_year_data <- bind_rows(data_1900, data_1910, data_1930) %>% 
+  mutate(year = as.character(year))
+
+# Process baseline data
+baseline_data <- process_baseline(coefficients_baseline, standard_errors_baseline)
+
+# Combine all data
+all_data <- bind_rows(baseline_data, all_year_data) %>%
+  mutate(
+    Variable = fct_relevel(Variable, "Union density"),
+    Variable = fct_relevel(Variable, "Treated"),
+    year = fct_relevel(year, "Baseline")
+  ) %>% as_tibble() %>% 
+  filter(year != "Baseline")
+
+# Create a facet plot
+ggplot(all_data %>% filter(year == 1900), aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
+  geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
+  # facet_grid(year ~ .) +
+  theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient (standardized)",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles_1900_v7.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+
+
+
+```{r}
+
+# Create a facet plot
+ggplot(all_data %>% filter(year != 1900), aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
+  geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
+  facet_grid(year ~ .) +
+  theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient (standardized)",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles_1910_1930_v8.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
 ```

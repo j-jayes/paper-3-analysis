@@ -108,6 +108,7 @@ df <- df %>%
   bind_rows(tibble(year = 1870, value = 0))  %>% 
   bind_rows(tibble(year = 1950, value = 98))
 
+# df %>% write_rds(here::here("replication-data", "figure-1.rds"))
 
 p1 <- df %>% ggplot(aes(year, value)) +
   geom_vline(xintercept = 1921, linetype = "dashed", color = "#A6761D", size = 1.1) +

@@ -1,0 +1,364 @@
+---
+title: "Untitled"
+format: html
+---
+
+Purpose
+
+We need to match the population data for 1900 and 1910 to the union membership data. 
+
+Because we have geom_id and ref code for these, would be ideal to match these up to the histmaps map.
+
+```{r}
+library(tidyverse)
+library(histmaps)
+library(ipumsr)
+library(sf)
+
+dat <- ipumsr::read_ipums_micro(
+  ddi = "data/1900-1910-census/ipumsi_00008.xml",
+  data_file = "data/1900-1910-census/ipumsi_00008.dat.gz"
+)
+
+dat %>% count(YEAR, sort = T)
+
+dat %>% colnames()
+
+dat_sample <- dat %>%
+slice_sample(n = 1000)
+
+dat_sample %>% write_csv("data/1900-1910-census/sample.csv")
+
+parish_population_count <- dat %>% select(YEAR, PARSE) %>% count(YEAR, PARSE) %>% arrange(PARSE, YEAR)
+
+parish_population_count %>% write_csv2("data/1900-1910-census/population_counts.csv")
+```
+
+
+```{r}
+parish_population_count <- read_csv2("data/1900-1910-census/population_counts.csv") %>% janitor::clean_names() %>% rename(population = n,
+parish_code = parse)
+
+```
+
+parish names from 1900 and 1910
+
+
+```{r}
+df_parish_names = readxl::read_excel("data/1900-1910-census/parish_codes_ipums.xlsx")
+
+df_parish_names <- df_parish_names %>% 
+separate_wider_delim(parish_code, delim = "           ", names = c("parish_code", "parish_name"))  %>% 
+mutate(parish_code = parse_number(parish_code))
+
+
+df_parish_names %>% filter(str_detect(parish_code, "158004"))
+
+df_parish_names %>% filter(str_detect(parish_code, "248207"))
+
+df_parish_names %>% filter(str_detect(parish_code, "188003"))
+
+df_parish_names %>% filter(str_detect(parish_code, "58301"))
+
+```
+
+Join parish names to population
+
+```{r}
+
+parish_population_count_with_names <- parish_population_count %>% left_join(df_parish_names, by = c("parish_code"))
+```
+
+
+```{r}
+parish_population_count_with_names
+```
+
+So what do I need to do here?
+
+I need to join this data up to the 1930 parishes map, so that we can then join it to the union membership data.
+
+
+```{r}
+parish_map <- get_boundaries(1930, "parish")
+
+parish_map_st <- st_as_sf(parish_map)
+
+parish_map_st <- parish_map_st %>% 
+st_transform(4326)
+
+parish_map_st <- parish_map_st %>% 
+mutate(parish_code = parse_number(str_remove(ref_code, "SE/"))) 
+
+parish_map_st_to_join <- parish_map_st %>% select(geom_id, ref_code, name, parish_code) %>% as_tibble() %>% select(-geometry)
+
+parish_map_st_to_join %>% 
+anti_join(parish_population_count_with_names, by = c("parish_code" = "parish_code")) 
+
+
+
+# parish_population_count_with_names %>% 
+# anti_join(parish_map_st_to_join, by = c("parish_code" = "parish_code"))  %>% view()
+
+
+parish_map_st_to_join %>% filter(str_detect(name, "Helsingborg"))
+
+
+parish_population_count_with_names %>% filter(str_detect(parish_name, "Helsingborg"))
+
+parish_population_count_with_names %>% filter(str_detect(parish_code, "178001"))
+```
+
+
+So the takeaway is that I need to shorten all the data sources to the same level of detail, the short code that drops the last three digits from the long parish code.
+
+
+```{r}
+parish_population_count_with_names_short <- parish_population_count_with_names %>%
+    mutate( # create parish_code_short by dropping final 3 digits
+        parish_code_short = str_sub(parish_code, end = -4),
+        parish_code_short = as.numeric(parish_code_short)
+    ) %>%
+    group_by(year, parish_code_short) %>%
+    mutate(total_population = sum(population)) %>% 
+    ungroup()
+
+
+parish_population_count_with_names_short <- parish_population_count_with_names_short %>% 
+select(year, parish_code_short, total_population)  %>% distinct()
+
+write_rds(parish_population_count_with_names_short, here::here("data", "union-data", "snd", "parish-population-by-parish-for-1930-check-v1.rds"))
+```
+
+Now do the same with the union membership data
+
+```{r}
+df_joined_long_fackf_distinct_no_zeros <- read_rds(here::here("data", "union-data", "snd", "union-membership-by-parish-v1.rds"))
+
+df_joined_long_fackf_distinct_no_zeros_total <- df_joined_long_fackf_distinct_no_zeros %>% 
+mutate( 
+    parish_code = str_remove(ref_code, "SE/"),
+    # create parish_code_short by dropping final 3 digits
+    parish_code_short = str_sub(parish_code, end = -4),
+    parish_code_short = as.numeric(parish_code_short)
+)  %>% 
+select(-parish_code)  %>% 
+group_by(year, parish_code_short)  %>%
+summarise(total_members_agg = sum(total_members, na.rm = T))  %>% 
+ungroup() %>% 
+mutate(total_members_agg = case_when(
+    total_members_agg == 0 ~ NA_real_,
+    TRUE ~ total_members_agg
+)) %>% 
+arrange(parish_code_short) 
+
+df_joined_long_fackf_distinct_no_zeros_total
+```
+
+
+Get population for 1930
+
+
+```{r}
+library(arrow)
+df_census_1930 <- read_parquet(here::here("data", "census", "census_1930.parquet"))
+
+population_1930 <- df_census_1930 %>% count(ref_code_current_parish_x) %>% 
+rename(parish_code_short = ref_code_current_parish_x,
+total_population = n) %>%
+mutate(year = 1930)
+
+population_1930
+```
+
+
+Join this population data to the other data
+
+```{r}
+parish_population_count_with_names_short_and_1930 <- bind_rows(parish_population_count_with_names_short, population_1930) %>% 
+arrange(parish_code_short, year) 
+
+# parish_population_count_with_names_short_and_1930 %>% view()
+```
+
+
+Join the data together, and calculate the average for 1880, 1890, 1900, 1910, with a 5 year window.
+
+
+
+```{r}
+df_joined_long_fackf_distinct_no_zeros_total_window <- df_joined_long_fackf_distinct_no_zeros_total %>%
+    mutate(window = case_when(
+        between(year, 1875, 1885) ~ 1880,
+        between(year, 1885, 1895) ~ 1890,
+        between(year, 1895, 1905) ~ 1900,
+        between(year, 1905, 1915) ~ 1910,
+        between(year, 1915, 1925) ~ 1920,
+        between(year, 1925, 1935) ~ 1930,
+        TRUE ~ NA_real_
+    )) %>%
+    group_by(window, parish_code_short) %>%
+    mutate(total_members_agg_window = round(mean(total_members_agg, na.rm = T))) %>%
+    ungroup() %>%
+    select(window, parish_code_short, total_members_agg_window) %>%
+    distinct() %>%
+    filter(!is.na(window)) %>%
+    rename(year = window, total_members = total_members_agg_window)
+
+
+
+df_union_density <- df_joined_long_fackf_distinct_no_zeros_total_window %>%
+    left_join(parish_population_count_with_names_short_and_1930, by = c("year", "parish_code_short")) %>%
+    mutate(union_density = total_members / total_population) %>%
+    mutate(union_density = case_when(
+        union_density > 1 ~ 0.5,
+        TRUE ~ union_density
+    ))
+
+
+df_union_density %>% write_rds(here::here("data", "union-data", "snd", "union-density-by-parish-v1.rds"))
+
+
+df_union_density_wide <- df_union_density %>%
+    select(year, parish_code_short, union_density) %>%
+    filter(year != 1920) %>%
+    pivot_wider(names_from = year, values_from = union_density, names_prefix = "union_density_")
+
+
+df_union_density_wide %>% skimr::skim()
+
+
+parish_population_count_with_names %>% filter(str_detect(parish_code, "18021"))
+
+
+```
+
+
+
+
+Calculate for treated parishes
+
+```{r}
+df_union_density_wide
+
+treated_parishes <- readxl::read_excel(here::here("data", "parishes", "treated_parishes_with_distance_threshold_and_population.xlsx"))
+
+
+treated_parishes <- treated_parishes %>%
+    mutate(
+        parish_code_short = str_remove(parish_code, "SE/"),
+        parish_code_short = str_sub(parish_code_short, end = -4),
+        parish_code_short = as.numeric(parish_code_short)
+    ) %>%
+    group_by(parish_code_short) %>%
+    slice(1) %>%
+    ungroup()
+
+
+treated_parishes_to_join <- treated_parishes %>% select(parish_code_short, distance_to_line, treated)
+
+treated_parishes_to_join
+
+df_union_density_wide_treated <- df_union_density_wide %>%
+    left_join(treated_parishes_to_join, by = c("parish_code_short")) %>%
+    mutate(treated = case_when(
+        is.na(treated) ~ 0,
+        TRUE ~ treated
+    ))
+
+df_union_density_wide_treated %>%
+    write_rds(here::here("data", "union-data", "snd", "union-density-by-parish-wide-to-join-v0.rds"))
+
+
+df_union_density_wide_treated %>%
+    select(-c(union_density_1880, treated, distance_to_line)) %>%
+    write_csv(here::here("data", "union-data", "snd", "union-density-by-parish-wide-to-join-v1.csv"))
+```
+
+Table for how many parishes we have information on
+
+```{r}
+df_union_density_wide_treated <- read_rds(here::here("data", "union-data", "snd", "union-density-by-parish-wide-to-join-v0.rds"))
+
+n_non_nan <- df_union_density_wide_treated %>%
+    filter(distance_to_line <= 300) %>%
+    # across union_density columns, count how many times there is a value
+    summarise(across(starts_with("union_density"), ~ sum(!is.na(.)))) %>%
+    mutate(type = "non_nan")
+
+n_nan <- df_union_density_wide_treated %>%
+    filter(distance_to_line <= 300) %>%
+    # across union_density columns, count how many times there is a value
+    summarise(across(starts_with("union_density"), ~ sum(is.na(.)))) %>%
+    mutate(type = "nan")
+
+n_share_complete <- n_non_nan %>% bind_rows(n_nan)
+
+
+n_share_complete_table <- n_share_complete %>%
+    pivot_longer(cols = -type) %>%
+    mutate(name = parse_number(name)) %>%
+    pivot_wider(names_from = type, values_from = value) %>%
+    mutate(share_complete = non_nan / (non_nan + nan)) %>%
+    mutate(total = non_nan + nan) %>%
+    rename(
+        year = name,
+        union_membership_data_present = non_nan,
+        union_membership_data_missing = nan
+    )
+
+n_share_complete_table %>%
+    write_csv(here::here("data", "union-data", "snd", "share-complete-union-density-summary.csv"))
+
+n_share_complete_table %>%
+    gt() %>%
+    cols_label(year = "Year", union_membership_data_present = "Data Present", union_membership_data_missing = "Data Missing", share_complete = "Share Complete", total = "Total number of Parishes") %>%
+    fmt_number(columns = c(union_membership_data_present, union_membership_data_missing, total), decimals = 0) %>%
+    fmt_percent(columns = share_complete, decimals = 2) %>%
+    tab_header(
+        title = md("**Share of Parishes with Union Membership Data**"),
+        subtitle = "In subset of parishes used in regression sample"
+    ) %>%
+    gtsave(here::here("figures", "091-tab-union-density-share-complete.png"))
+
+```
+
+```{r}
+library(gt)
+
+df_union_density_wide_tab <- df_union_density_wide_treated %>%
+    filter(distance_to_line < 300) %>%
+    group_by(treated) %>%
+    summarise(across(starts_with("union_density"), mean, na.rm = T)) %>%
+    pivot_longer(cols = -treated, names_to = "year", values_to = "union_density") %>%
+    mutate(year = parse_number(year)) %>%
+    mutate(treated = case_when(
+        treated == 1 ~ "Treated",
+        TRUE ~ "Control"
+    ))
+
+
+df_union_density_wide_tab %>%
+    pivot_wider(names_from = treated, values_from = union_density) %>%
+    gt() %>%
+    fmt_percent(columns = c(Control, Treated), decimals = 2) %>%
+    sub_missing(columns = c(Control, Treated), missing_text = "-") %>%
+    cols_label(year = "Year") %>%
+    tab_header(
+        title = md("**Union Density by Treatment Status**"),
+        subtitle = "In subset of parishes used in regression sample"
+    ) %>%
+    gtsave(here::here("figures", "092-tab-union-density-by-treatment-status.png"))
+
+
+```
+
+
+
+```{r}
+df_union_density_wide_tab %>%
+    ggplot(aes(x = year, y = union_density, color = treated)) +
+    geom_line() 
+```
+
+

@@ -1,0 +1,409 @@
+---
+title: "Geocode union membership data"
+format: html
+---
+
+I need to locate the towns with all of the information on a map. 
+
+```{r}
+library(tidyverse)
+df_union_membership <- readxl::read_excel(here::here("data", "union-data", "snd", "0209total.xlsx"))
+
+df_union_membership %>% select(V5, V10) %>% count(V10, sort = T) 
+
+df_union_places <- df_union_membership %>% select(V5, V10)  %>% distinct()
+```
+
+
+```{r}
+library(histmaps)
+library(sf)
+
+map <- get_boundaries(1930, "parish")
+
+map_st <- st_as_sf(map)
+
+library(mapview)
+
+# mapview(map_st)
+```
+
+```{r}
+map_counties <- get_boundaries(1930, "county")
+
+counties <- map_counties %>% select(ref_code, name) %>% as_tibble() %>% select(-geometry)
+
+counties <- counties %>% 
+mutate(county_code = str_sub(ref_code, 4, 5),
+       county_code = as.numeric(county_code))  %>% 
+       select(-ref_code, county_name = name) 
+
+counties <- counties %>% arrange(county_code)
+```
+
+Changes to Geocode:
+
+Stockholm for 1 and 2. 
+
+Kristianstads (11) to Skane (12)
+
+Alvsborgs and skaraborgs (15 and 16) to Västra Götalands (14)
+
+
+```{r}
+df_union_places <- df_union_places %>% 
+inner_join(counties, by = c("V5" = "county_code"))
+```
+
+
+```{r}
+df_union_places <- df_union_places %>% 
+mutate(county_name = case_when(
+    county_name == "Stockholms överståthållarskap" ~ "Stockholms",
+    county_name == "Kristianstads" ~ "Skåne",
+    county_name == "Älvsborgs" ~ "Västra Götalands",
+    county_name == "Skaraborgs" ~ "Västra Götalands",
+    TRUE ~ county_name
+)) %>%
+# drop a trailing s from county_name
+mutate(county_name = str_remove(county_name, "s$"))  %>% 
+mutate(# add " county" to county_name
+    county_name = paste0(county_name, " County")
+) 
+
+df_union_places <- df_union_places %>% 
+mutate(address = str_c(V10, ", ", county_name)) 
+```
+
+
+```{r}
+library(httr)
+library(jsonlite)
+
+# read API key
+api_key <- readLines(here::here("env.txt"), , warn = FALSE)
+
+geocode <- function(address, api_key) {
+    message("Getting data for ", address)
+
+    url <- "https://maps.googleapis.com/maps/api/geocode/json"
+    response <- GET(url, query = list(address = address, key = api_key))
+
+    data <- fromJSON(content(response, "text"))
+
+    if (data$status == "OK") {
+
+        flat_data <- data$results
+
+        lat_long_name <- flat_data %>%
+            unnest(geometry) %>%
+            unnest(location) %>%
+            select(
+                location = formatted_address,
+                lat, lng
+            )
+
+        message("Geocoded ", address, "as", lat_long_name$lat, ",", lat_long_name$lng)
+        return(lat_long_name)
+    } else {
+        message("Geocoding failed for", address)
+        return(nest(tibble(location = NA, lat = NA, lng = NA)))
+    }
+}
+
+df_union_places_geocoded <- df_union_places %>%
+    mutate(coordinates = map(address, geocode, api_key = api_key))
+
+df_union_places_geocoded %>% write_rds(here::here("data", "union-data", "snd", "union-places-geocoded_pass_1.rds")
+```
+
+```{r}
+df_union_places_geocoded_pass_1 <- df_union_places_geocoded %>% unnest(coordinates) %>%
+filter(!is.na(lat), !is.na(lng)) %>% 
+select(-data) %>% distinct() 
+
+# we need to remove the duplicates
+df_union_places_geocoded_pass_1 <- df_union_places_geocoded_pass_1 %>% group_by(address) %>% slice(1) %>% ungroup() 
+```
+
+
+```{r}
+df_union_places_missed <- df_union_places_geocoded %>% 
+unnest(coordinates) %>%
+filter(is.na(lat), is.na(lng)) 
+
+df_union_places_missed <- df_union_places_missed %>% mutate(address = case_when(
+    address == "Ström, Jämtland County" ~ "Strömsund, Jämtland County",
+    address == "Herrrberga, Östergötland County" ~ "Herrberga, Östergötland County",
+    address == "Kärna, Östergötland County" ~ "Kärna kyrka, Östergötland County",
+    address == "Vist, Östergötland County" ~ "Vists kyrka, Sturefors, Östergötland County",
+    address == "Å, Östergötland County" ~ "Å kyrka, Östergötland County",
+    address == "Åsbo, Östergötland County" ~ "Åsbo kyrka, Östergötland County",
+    address == "Allhelgona, Östergötland County" ~ "Helgonagatan 9, 596 31 Skänninge, Sweden",
+    address == "Varv och Styra, Östergötland County" ~ "Varv Styra Kyrka, Östergötland County",
+    address == "Ask, Östergötland County" ~ "Ask kyrka, Motala, Östergötland County",
+    TRUE ~ address
+))
+
+df_union_places_missed_2nd_pass <- df_union_places_missed %>%
+select(-c(location, lat, lng, data)) %>% 
+    mutate(coordinates = map(address, geocode, api_key = api_key))
+
+df_union_places_missed_2nd_pass <- df_union_places_missed_2nd_pass %>% unnest(coordinates)
+```
+
+```{r}
+df_union_places_joined <- bind_rows(df_union_places_geocoded_pass_1, df_union_places_missed_2nd_pass) 
+```
+
+Fix two errors in the geocoding.
+
+```{r}
+df_union_places_joined %>% 
+filter(address %in% c("Ny, Värmland County", "Ål, Dalarna County")) %>% 
+mutate(address = case_when(
+    address == "Ny, Värmland County" ~ "Ny kyrka, Värmland County",
+    address == "Ål, Dalarna County" ~ "Åhl kyrka, Dalarna County"
+)) -> df_union_places_missed_3rd_pass 
+
+df_union_places_missed_3rd_pass <- df_union_places_missed_3rd_pass %>% 
+select(-c(location, lat, lng))
+
+df_union_places_geocoded_3rd <- df_union_places_missed_3rd_pass %>%
+    mutate(coordinates = map(address, geocode, api_key = api_key))
+
+df_union_places_geocoded_3rd <- df_union_places_geocoded_3rd %>% unnest(coordinates)
+
+
+df_union_places_geocoded_3rd
+
+df_union_places_joined %>% filter(!address %in% c("Ny, Värmland County", "Ål, Dalarna County"))  %>% 
+bind_rows(df_union_places_geocoded_3rd) -> df_union_places_joined
+
+
+df_union_places_joined %>% 
+mutate(merge_col = str_c(V5, "-", V10))  %>% 
+count(merge_col, sort = T)
+
+
+df_union_places_joined %>% write_rds(here::here("data", "union-data", "snd", "union-places-geocoded_pass_3.rds"))
+```
+
+Unnest the coordinates and then convert to an sf object.
+
+
+```{r}
+df_union_places_joined_sf <- df_union_places_joined %>% 
+    filter(!is.na(lat), !is.na(lng)) %>% 
+    st_as_sf(coords = c("lng", "lat"), crs = 4326)
+
+```
+
+Check that the geocoded places are within the correct counties.
+
+
+```{r}
+countries_sf <- st_as_sf(map_counties)
+
+mapview(countries_sf) + 
+mapview(df_union_places_joined_sf)
+```
+
+
+
+```{r}
+parish_map <- get_boundaries(1930, "parish")
+
+parish_map_st <- st_as_sf(parish_map)
+
+parish_map_st <- parish_map_st %>% 
+st_transform(4326)
+
+mapview(parish_map_st) +
+mapview(df_union_places_joined_sf)
+
+```
+
+
+Now we need to calculate which parish the location is in.
+
+```{r}
+# set s2 off
+sf_use_s2(FALSE)
+
+
+df_union_places_joined_to_parishes <- df_union_places_joined_sf %>%
+    st_join(parish_map_st, join = st_nearest_feature)
+
+# df_union_places_joined_to_parishes %>% filter(V10 == "Stockholms stad") %>% st_join(parish_map_st) %>% View()
+
+# mapview(df_union_places_joined_to_parishes %>% filter(V10 == "Stockholms stad")) + mapview(parish_map_st)
+
+# So no missing parishes
+df_union_places_joined_to_parishes %>%
+    as_tibble() %>%
+    anti_join(df_union_places_joined_sf %>% as_tibble(), by = "address") 
+```
+
+
+```{r}
+df_union_places_joined_to_parishes <- df_union_places_joined_to_parishes %>%
+    select(V5, V10, address, geom_id, ref_code, parish_name = name)
+
+# need to remove duplicates here, arrange by ref_code and take the top one for each ref_code. Only a few instances where there is a problem.
+df_union_places_joined_to_parishes %>% 
+mutate(ref_code_num = as.numeric(str_remove(ref_code, "SE/")),
+    merge_col = str_c(V5, "-", V10))  %>% 
+group_by(merge_col) %>% 
+arrange(ref_code_num) %>%
+slice(1) %>%
+ungroup()  %>% view()
+
+
+# save this as an RDS file
+saveRDS(df_union_places_joined_to_parishes, here::here("data", "union-data", "snd", "union-places-geocoded_v2.rds"))
+```
+
+
+Now we can join this to the union membership data.
+
+
+```{r}
+
+
+# Create a tibble for renaming columns
+column_names <- tibble(
+  Number = 1:98,
+  Name = c(
+    "SSD Study NR 0209", "SSD Edition NR 3", "SSD Part NR 001", "ID-nummer", 
+    "Länskod", "Geografisk kod rättad", "Geografisk kod 2576 kommuner", 
+    "Ort där föreningen är belägen", "Församlingens kod enligt SCB 1985", 
+    "Församlingens namn", "Kommunens kod enligt SCB 1985", "Kommunens namn", 
+    "Län och häradsnummer", "Häradets namn", "Organisationens kod", 
+    "Organisationens namn", "Avdelnings eller loge-nummer", "Typ av organisation i kod", 
+    "Typ av organisation", "Matrisindex 1", "Matrisindex 2", 
+    "Antalet år som föreningen har existerat", "Första året föreningen existerar", 
+    "Sista året föreningen existerar", "Föreningen nedlagd första gången från och med år", 
+    "Föreningen nedlagd första gången till och med år", 
+    "Föreningen nedlagd andra gången från och med år", 
+    "Föreningen nedlagd andra gången till och med år", 
+    "Antal medlemmar den 31 december 1881", "Antal medlemmar den 31 december 1882", 
+    "Antal medlemmar den 31 december 1883", "Antal medlemmar den 31 december 1884", 
+    "Antal medlemmar den 31 december 1885", "Antal medlemmar den 31 december 1886", 
+    "Antal medlemmar den 31 december 1887", "Antal medlemmar den 31 december 1888", 
+    "Antal medlemmar den 31 december 1889", "Antal medlemmar den 31 december 1890", 
+    "Antal medlemmar den 31 december 1891", "Antal medlemmar den 31 december 1892", 
+    "Antal medlemmar den 31 december 1893", "Antal medlemmar den 31 december 1894", 
+    "Antal medlemmar den 31 december 1895", "Antal medlemmar den 31 december 1896", 
+    "Antal medlemmar den 31 december 1897", "Antal medlemmar den 31 december 1898", 
+    "Antal medlemmar den 31 december 1899", "Antal medlemmar den 31 december 1900", 
+    "Antal medlemmar den 31 december 1901", "Antal medlemmar den 31 december 1902", 
+    "Antal medlemmar den 31 december 1903", "Antal medlemmar den 31 december 1904", 
+    "Antal medlemmar den 31 december 1905", "Antal medlemmar den 31 december 1906", 
+    "Antal medlemmar den 31 december 1907", "Antal medlemmar den 31 december 1908", 
+    "Antal medlemmar den 31 december 1909", "Antal medlemmar den 31 december 1910", 
+    "Antal medlemmar den 31 december 1911", "Antal medlemmar den 31 december 1912", 
+    "Antal medlemmar den 31 december 1913", "Antal medlemmar den 31 december 1914", 
+    "Antal medlemmar den 31 december 1915", "Antal medlemmar den 31 december 1916", 
+    "Antal medlemmar den 31 december 1917", "Antal medlemmar den 31 december 1918", 
+    "Antal medlemmar den 31 december 1919", "Antal medlemmar den 31 december 1920", 
+    "Antal medlemmar den 31 december 1921", "Antal medlemmar den 31 december 1922", 
+    "Antal medlemmar den 31 december 1923", "Antal medlemmar den 31 december 1924", 
+    "Antal medlemmar den 31 december 1925", "Antal medlemmar den 31 december 1926", 
+    "Antal medlemmar den 31 december 1927", "Antal medlemmar den 31 december 1928", 
+    "Antal medlemmar den 31 december 1929", "Antal medlemmar den 31 december 1930", 
+    "Antal medlemmar den 31 december 1931", "Antal medlemmar den 31 december 1932", 
+    "Antal medlemmar den 31 december 1933", "Antal medlemmar den 31 december 1934", 
+    "Antal medlemmar den 31 december 1935", "Antal medlemmar den 31 december 1936", 
+    "Antal medlemmar den 31 december 1937", "Antal medlemmar den 31 december 1938", 
+    "Antal medlemmar den 31 december 1939", "Antal medlemmar den 31 december 1940", 
+    "Antal medlemmar den 31 december 1941", "Antal medlemmar den 31 december 1942", 
+    "Antal medlemmar den 31 december 1943", "Antal medlemmar den 31 december 1944", 
+    "Antal medlemmar den 31 december 1945", "Antal medlemmar den 31 december 1946", 
+    "Antal medlemmar den 31 december 1947", "Antal medlemmar den 31 december 1948", 
+    "Antal medlemmar den 31 december 1949", "Antal medlemmar den 31 december 1950"
+  )
+)
+
+# Display the tibble
+print(column_names)
+
+column_names <- column_names %>% 
+# make name snake case by converting to lower case and replacing spaces with underscores, replace any punctuation with _
+mutate(Name = str_replace_all(str_to_lower(Name), "[[:punct:]]", "_"),
+       Name = str_replace_all(Name, " ", "_")) 
+
+# rename the columns
+df_union_membership_new_names <- df_union_membership %>%
+rename_all(~column_names$Name) 
+```
+
+
+
+
+
+```{r}
+df_union_membership_new_names_long <- df_union_membership_new_names %>% 
+select(5, 10, 19, contains("antal_medlemmar"))  %>% 
+pivot_longer(cols = contains("antal_medlemmar"), names_to = "year", values_to = "members")  %>% 
+mutate(year = as.numeric(str_extract(year, "\\d{4}")))
+
+df_union_membership_new_names_long
+
+df_union_membership_new_names_long <- df_union_membership_new_names_long %>% 
+mutate(merge_col = str_c(länskod, "-", församlingens_namn))
+
+```
+
+
+
+```{r}
+df_union_places_joined_to_parishes <- df_union_places_joined_to_parishes %>%
+    mutate(merge_col = str_c(V5, "-", V10))
+
+df_union_places_joined_to_parishes %>% count(merge_col, sort = T)
+
+# df_union_places_joined_to_parishes %>% filter(merge_col %in% c("18-Nora bergförs.")) %>% view()
+
+df_joined_long <- df_union_membership_new_names_long %>%
+    inner_join(df_union_places_joined_to_parishes, by = "merge_col") 
+```
+
+
+
+```{r}
+df_joined_long_fackf <- df_joined_long %>%
+    filter(typ_av_organisation == "FACKF")
+
+
+df_joined_long_fackf_distinct <- df_joined_long_fackf  %>% 
+group_by(ref_code, year) %>% 
+mutate(total_members = sum(members, na.rm = T))  %>% 
+ungroup()  %>% 
+select(year, total_members, geom_id, ref_code, parish_name)  %>% distinct() %>% 
+arrange(ref_code, year)
+
+
+df_joined_long_fackf_distinct %>% count(ref_code, sort = T)
+
+df_joined_long_fackf_distinct %>% filter(ref_code == "SE/188502005")
+
+df_joined_long_fackf_distinct <- df_joined_long_fackf_distinct %>% 
+filter(geom_id != 14650)
+```
+
+
+
+```{r}
+df_joined_long_fackf_distinct_no_zeros <- df_joined_long_fackf_distinct %>% 
+mutate(total_members = case_when(
+    total_members == 0 ~ NA_real_,
+    TRUE ~ total_members
+))
+
+df_joined_long_fackf_distinct_no_zeros %>% write_rds(here::here("data", "union-data", "snd", "union-membership-by-parish-v1.rds"))
+```
+
+
+Now we want to check how many parishes have information that differs by the last three digits of the parish code, as these are the ones that we have to join the 1930 census data on.
+

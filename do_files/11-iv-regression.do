@@ -167,3 +167,9 @@ esttab OLS_no_controls OLS_controls iv_no_controls_stage_1 iv_controls_stage_1 i
 	log_income "Ln Income"
 	current_parish_treated "Current parish treated"
 	birth_parish_treated "Birth parish treated")
+
+	
+	
+	
+	
+	

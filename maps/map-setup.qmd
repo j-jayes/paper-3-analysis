@@ -547,11 +547,18 @@ ggsave(filename = here::here("maps/map_big_power_stations_line_1926_with_treated
 ### write out parishes treated subset and parishes control subset
 
 ```{r}
-
-
-
 parishes_subset_treated %>% 
   st_write(here::here("data", "maps", "parishes_subset_treated.shp"))
+
+parishes_subset_treated %>% 
+filter(!is.na(geom_id))  %>% 
+as_tibble() %>% 
+count()
+
+parishes_subset_control %>% 
+filter(!is.na(geom_id)) %>% 
+as_tibble() %>% 
+count()
 
 parishes_subset_control %>%
   st_write(here::here("data", "maps", "parishes_subset_control.shp"))
@@ -805,64 +812,70 @@ treated_parishes <- treated_parishes %>%
     TRUE ~ as.character(parish_code)
   ))
 
-parishes_subset_treated <- treated_parishes %>% 
+parishes_subset_treated_1930 <- treated_parishes %>% 
   left_join(parishes, by = "ref_code") %>% 
   st_as_sf()
 
-parishes_subset_control <- parishes %>% 
+parishes_subset_control_1930 <- parishes %>% 
   filter(current_parish_touching_treated == 0,
          current_parish_treated == 0,
          current_parish_distance_to_line <= 300)
+
+
+figure_3_data <- list(hydro = hydro, counties = counties, parishes_subset_treated = parishes_subset_treated, parishes_subset_control = parishes_subset_control, map_grid = map_grid, parishes_subset_treated_1930 = parishes_subset_treated_1930, parishes_subset_control_1930 = parishes_subset_control_1930)
+
+# figure_3_data %>% write_rds(here::here("replication-data", "figure-3.rds"))
+
 
 ```
 
 
 ```{r}
 ggplot() +
-  geom_sf(data = counties, colour = "grey70", fill = "#edf8fb") +
-  # Power plants
-  geom_point(aes(geometry = geometry, colour = "Hydropower plants"),
-    stat = StatSfCoordinates,
-    fun.geometry = sf::st_centroid,
-    size = 10, shape = 18, alpha = .9,
-    data = hydro
-  ) +
-  # Treated parishes
-  geom_sf(data = parishes_subset_treated,  colour = "grey70", aes(fill = "Treated parishes")) + 
-  geom_sf_text(aes(label = name), data = hydro, size = 8, nudge_y = .35) +
-  # Lines
-  geom_sf(aes(colour = "Electricity lines\n1926"),
-    data = map_grid %>%
-      filter(year == 1926), linewidth = 1.5, alpha = .3, show.legend = "line"
-  ) +
-  # Fills
-  scale_fill_manual(values = c("Treated parishes" = "#fc8d59"), guide = guide_legend(override.aes = list(linetype = "blank", shape = NA))) +
-  scale_color_manual(
-    values = c("Electricity lines\n1926" = "#000080", "Hydropower plants" = "#d7301f"),
-    guide = guide_legend(override.aes = list(
-      linetype = c("solid", "blank"),
-      shape = c(NA, 18)
-    ))
-  ) +
-  coord_sf(
-    xlim = c(NA, 23),
-    ylim = c(55.6, 65)
-  ) +
-  theme_void() +
-  labs(
-    x = NULL,
-    y = NULL,
-    fill = NULL,
-    colour = NULL
-  ) +
-  theme(
-    axis.text = element_blank(),
-    panel.background = element_rect(fill = "#DCE9ED"),
-    panel.grid = element_blank(),
-    #
-    legend.position = c(0.77, 0.11),
-    text = element_text(family = "ibm", size = 15)
-  )
+    geom_sf(data = counties, colour = "grey70", fill = "#edf8fb") +
+    # Power plants
+    geom_point(aes(geometry = geometry, colour = "Hydropower plants"),
+        stat = StatSfCoordinates,
+        fun.geometry = sf::st_centroid,
+        size = 10, shape = 18, alpha = .9,
+        data = hydro
+    ) +
+    # Treated parishes
+    geom_sf(data = parishes_subset_treated_1930, colour = "grey70", aes(fill = "Treated parishes")) +
+    geom_sf_text(aes(label = name), data = hydro, size = 8, nudge_y = .35) +
+    # Lines
+    geom_sf(aes(colour = "Electricity lines\n1926"),
+        data = map_grid %>%
+            filter(year == 1926), linewidth = 1.5, alpha = .3, show.legend = "line"
+    ) +
+    # Fills
+    scale_fill_manual(values = c("Treated parishes" = "#fc8d59"), guide = guide_legend(override.aes = list(linetype = "blank", shape = NA))) +
+    scale_color_manual(
+        values = c("Electricity lines\n1926" = "#000080", "Hydropower plants" = "#d7301f"),
+        guide = guide_legend(override.aes = list(
+            linetype = c("solid", "blank"),
+            shape = c(NA, 18)
+        ))
+    ) +
+    coord_sf(
+        xlim = c(NA, 23),
+        ylim = c(55.6, 65)
+    ) +
+    theme_void() +
+    labs(
+        x = NULL,
+        y = NULL,
+        fill = NULL,
+        colour = NULL
+    ) +
+    theme(
+        axis.text = element_blank(),
+        panel.background = element_rect(fill = "#DCE9ED"),
+        panel.grid = element_blank(),
+        #
+        legend.position = c(0.77, 0.11),
+        text = element_text(family = "ibm", size = 15)
+    )
 
 ggsave(filename = here::here("maps/map_big_power_stations_line_1926_with_treated_parishes_1930_sample.jpeg"), device = "jpeg", width = 124, height = 196, units = "mm", dpi = 300)
 ```
@@ -871,57 +884,58 @@ ggsave(filename = here::here("maps/map_big_power_stations_line_1926_with_treated
 ### Big power stations and power lines 1926 and treated parishes and control parishes
 
 ```{r}
+
 ggplot() +
-  geom_sf(data = counties, colour = "grey70", fill = "#edf8fb") +
-  # Power plants
-  geom_point(aes(geometry = geometry, colour = "Hydropower plants"),
-    stat = StatSfCoordinates,
-    fun.geometry = sf::st_centroid,
-    size = 10, shape = 18, alpha = .9,
-    data = hydro
-  ) +
-  # Treated parishes
-  geom_sf(data = parishes_subset_treated,  colour = "grey70", aes(fill = "Treated parishes")) +
-  # Control parishes
-  geom_sf(data = parishes_subset_control,  colour = "grey70", aes(fill = "Control parishes")) +
-  geom_sf_text(aes(label = name), data = hydro, size = 8, nudge_y = .35) +
-  # Lines
-  geom_sf(aes(colour = "Electricity lines\n1926"),
-    data = map_grid %>%
-      filter(year == 1926), linewidth = 1.5, alpha = .3, show.legend = "line"
-  ) +
-  # Fills
-  scale_fill_manual(
-    values = c("Treated parishes" = "#fc8d59", "Control parishes" = "#fef0d9"),
-    guide = guide_legend(override.aes = list(linetype = "blank", shape = NA))
-  ) +
-  scale_color_manual(
-    values = c("Electricity lines\n1926" = "#000080", "Hydropower plants" = "#d7301f"),
-    guide = guide_legend(override.aes = list(
-      linetype = c("solid", "blank"),
-      shape = c(NA, 18)
-    ))
-  ) +
-  coord_sf(
-    xlim = c(NA, 23),
-    ylim = c(55.6, 65)
-  ) +
-  theme_void() +
-  labs(
-    x = NULL,
-    y = NULL,
-    fill = NULL,
-    colour = NULL,
-    # title = "Observed sample of treatment and control parishes\n(balanced)"
-  ) +
-  theme(
-    axis.text = element_blank(),
-    panel.background = element_rect(fill = "#DCE9ED"),
-    panel.grid = element_blank(),
-    plot.title = element_text(hjust = 0.5, vjust = -10, size = 10),
-    legend.position = c(0.77, 0.11),
-    text = element_text(family = "ibm", size = 14)
-  )
+    geom_sf(data = counties, colour = "grey70", fill = "#edf8fb") +
+    # Power plants
+    geom_point(aes(geometry = geometry, colour = "Hydropower plants"),
+        stat = StatSfCoordinates,
+        fun.geometry = sf::st_centroid,
+        size = 10, shape = 18, alpha = .9,
+        data = hydro
+    ) +
+    # Treated parishes
+    geom_sf(data = parishes_subset_treated, colour = "grey70", aes(fill = "Treated parishes")) +
+    # Control parishes
+    geom_sf(data = parishes_subset_control, colour = "grey70", aes(fill = "Control parishes")) +
+    geom_sf_text(aes(label = name), data = hydro, size = 8, nudge_y = .35) +
+    # Lines
+    geom_sf(aes(colour = "Electricity lines\n1926"),
+        data = map_grid %>%
+            filter(year == 1926), linewidth = 1.5, alpha = .3, show.legend = "line"
+    ) +
+    # Fills
+    scale_fill_manual(
+        values = c("Treated parishes" = "#fc8d59", "Control parishes" = "#fef0d9"),
+        guide = guide_legend(override.aes = list(linetype = "blank", shape = NA))
+    ) +
+    scale_color_manual(
+        values = c("Electricity lines\n1926" = "#000080", "Hydropower plants" = "#d7301f"),
+        guide = guide_legend(override.aes = list(
+            linetype = c("solid", "blank"),
+            shape = c(NA, 18)
+        ))
+    ) +
+    coord_sf(
+        xlim = c(NA, 23),
+        ylim = c(55.6, 65)
+    ) +
+    theme_void() +
+    labs(
+        x = NULL,
+        y = NULL,
+        fill = NULL,
+        colour = NULL,
+        # title = "Observed sample of treatment and control parishes\n(balanced)"
+    ) +
+    theme(
+        axis.text = element_blank(),
+        panel.background = element_rect(fill = "#DCE9ED"),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, vjust = -10, size = 10),
+        legend.position = c(0.77, 0.11),
+        text = element_text(family = "ibm", size = 14)
+    )
 
 ggsave(filename = here::here("maps/map_big_power_stations_line_1926_with_treated_and_control_parishes_1930_sample.jpeg"), device = "jpeg", width = 124, height = 196, units = "mm", dpi = 300)
 ```
@@ -940,5 +954,88 @@ combined_image <- image_append(c(image2, image1), stack = FALSE)
 
 # Save the combined image
 image_write(combined_image, "maps/map_big_power_stations_line_1926_with_treated_and_control_parishes_1930_sample_combined.jpeg")
+
+```
+
+
+
+
+# Now testing for probability of inclusion in treatment
+
+
+```{r}
+
+ggplot() +
+    geom_sf(data = figure_3_data$counties, colour = "grey70", fill = "#edf8fb") +
+    # Power plants
+    geom_point(aes(geometry = geometry, colour = "Hydropower plants"),
+        stat = StatSfCoordinates,
+        fun.geometry = sf::st_centroid,
+        size = 10, shape = 18, alpha = .9,
+        data = figure_3_data$hydro
+    ) +
+    # Treated parishes
+    geom_sf(data = figure_3_data$parishes_subset_treated, colour = "grey70", aes(fill = "Treated parishes")) +
+    # Control parishes
+    geom_sf(data = figure_3_data$parishes_subset_control, colour = "grey70", aes(fill = "Control parishes")) +
+    geom_sf_text(aes(label = name), data = hydro, size = 8, nudge_y = .35) +
+    # Lines
+    geom_sf(aes(colour = "Electricity lines\n1926"),
+        data = map_grid %>%
+            filter(year == 1926), linewidth = 1.5, alpha = .3, show.legend = "line"
+    ) +
+    # Fills
+    scale_fill_manual(
+        values = c("Treated parishes" = "#fc8d59", "Control parishes" = "#fef0d9"),
+        guide = guide_legend(override.aes = list(linetype = "blank", shape = NA))
+    ) +
+    scale_color_manual(
+        values = c("Electricity lines\n1926" = "#000080", "Hydropower plants" = "#d7301f"),
+        guide = guide_legend(override.aes = list(
+            linetype = c("solid", "blank"),
+            shape = c(NA, 18)
+        ))
+    ) +
+    coord_sf(
+        xlim = c(NA, 23),
+        ylim = c(55.6, 65)
+    ) +
+    theme_void() +
+    labs(
+        x = NULL,
+        y = NULL,
+        fill = NULL,
+        colour = NULL
+    ) +
+    theme(
+        axis.text = element_blank(),
+        panel.background = element_rect(fill = "#DCE9ED"),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, vjust = -10, size = 10),
+        legend.position = c(0.77, 0.11),
+        text = element_text(family = "ibm", size = 14)
+    )
+
+
+```
+
+
+
+```{r}
+ggplot() +
+  geom_sf(data = counties, colour = "grey70", fill = "#edf8fb") +
+    geom_sf(data = parishes_subset_treated,  colour = "grey70", aes(fill = "Treated parishes")) +
+      geom_sf(data = parishes_subset_control,  colour = "grey70", aes(fill = "Control parishes")) 
+
+parishes_subset_control %>% 
+as_tibble() %>% 
+  distinct(ref_code) %>% count()
+
+
+treated_parishes %>% 
+  distinct(ref_code) %>%
+  count()
+
+
 
 ```

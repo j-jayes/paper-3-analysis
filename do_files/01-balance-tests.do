@@ -68,6 +68,27 @@ ttest `var', by(treated)
 }
 
 
+
+/////////////////////////////////////////
+/////// Table: Differences Between Connected and Unconnected Parishes Prior to Access to the Grid 1900
+/////// Changes rather than levels
+
+clear all
+cd "/Users/jonathanjayes/Documents/PhD/paper-3-analysis/"
+use "data/balance-tests/filtered_data_with_distances_balanced_changes.dta"
+
+
+
+* create table with the mean and standard deviation of each variable by later access to the grid
+tabstat llabforce shc1 shc2 shc3 shc4 shc5 shc6 shc7, by(treated) format(%5.0g) stat(mean sd)
+
+* test for difference-in-means 
+foreach var of varlist llabforce shc1 shc2 shc3 shc4 shc5 shc6 shc7 {
+ttest `var', by(treated)
+}
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /////// Table: Differences Between Connected and Unconnected Parishes Prior to Access to the Grid 1890
 /////// Entire sample not balanbed sample
