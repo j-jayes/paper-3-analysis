@@ -5,52 +5,6 @@ format: html
 
 We want to make a plot of the share of electricity jobs (both direct and indirect) in the total number of jobs in the economy, over time. We will use the census data from 1890, 1900, 1910 and 1930.
 
-
-```{r}
-# install.packages("ipumsr")
-library(ipumsr)
-library(tidyverse)
-
-# Example data
-df_census_1880_1910 <- read_ipums_micro("data/census/ipumsi_00009.xml")
-
-
-df_census_1880_1910 <- df_census_1880_1910 %>% janitor::clean_names()
-
-df_census_1880_1910 %>% select(year, bplse2, occisco, occhisco) %>% head(200) %>% write_csv("data/census/temp.csv")
-```
-
-
-
-
-```{r}
-# read in "individual.csv" from data/census/dataset"
-library(data.table)
-df_test <- fread("data/census/dataset/individual.csv", sep = ";")
-
-df_test %>% colnames()
-
-df_test <- df_test %>% janitor::clean_names()
-
-df_test <- df_test %>% head(1000)
-
-df_test %>%
-    head(200) %>%
-    view()
-
-df_test[source == "Censuses", ] %>% view()
-
-df_test %>% colnames()
-
-df_test[type == "OCCUPATION_STANDARD_PART_1", ] %>% view()
-
-
-df_test_2 <- fread("data/census/dataset (1)/indiv_indiv.csv")
-
-df_test_2  %>% head(200) %>% view()
-```
-
-
 ## Trying again with new data.
 
 What do we want to do? We want to make a plot of the share of electricity jobs (both direct and indirect) in the total number of jobs in the economy, over time. We will use the census data from 1890, 1900, 1910 and 1930.
@@ -700,207 +654,278 @@ df_census_jobs <- df_census_short %>%
             return(0)
         }
     }))
+
+# df_census_jobs %>% write_rds("data/parishes/df_census_jobs_temp.rds")
 ```
 
 
-```{r}
-
-```
-
+Export list of 500 most common occupations that are not electricity jobs
 ```{r}
 df_census_jobs %>%
-    count(year, electricity_job_direct, electricity_job_indirect)
+    filter(electricity_job_direct == 0 & electricity_job_indirect == 0) %>%
+    count(occstring, sort = TRUE) %>%
+    head(500) %>%
+    write_excel_csv("data/parishes/500_most_common_occupations_not_electricity_jobs.csv")
+```
 
-df_census_jobs %>% 
-count(year, electricity_job_direct, electricity_job_indirect)
+```{r}
+# treated_parishes <- readxl::read_excel("data/parishes/treated_parishes.xlsx")
 
+# treated_parishes <- treated_parishes %>%
+#     select(parish_code, treated) %>%
+#     distinct()
 
-df_census_jobs %>% 
-filter(parse == 188029002)
+# df_census_jobs_treated <- df_census_jobs %>%
+#     left_join(treated_parishes, by = c("bplse2" = "parish_code")) %>%
+#     mutate(treated = case_when(
+#         is.na(treated) ~ 0,
+#         TRUE ~ treated
+#     )) %>%
+#     rename(birth_parish_treated = treated)
+
+# df_census_jobs_treated %>%
+#     select(year, electricity_job_direct, electricity_job_indirect, birth_parish_treated) %>%
+#     count(year, electricity_job_indirect, birth_parish_treated)
 ```
 
 
 ```{r}
-treated_parishes <- readxl::read_excel("data/parishes/treated_parishes.xlsx")
+treated_and_control_parishes <- readxl::read_excel("data/parishes/treated_parishes_with_distance_threshold_and_population.xlsx")
 
-treated_parishes <- treated_parishes %>% select(parish_code, treated) %>% distinct()
+treated_and_control_parishes_filtered <- treated_and_control_parishes %>%
+    filter(distance_to_line <= 300,
+    !is.na(population_1930)) %>% 
+    mutate(parish_code = str_remove(parish_code, "SE/"),
+    parish_code = as.numeric(parish_code)) %>%
+    select(parish_code, treated) %>%
+    distinct() 
 
-df_census_jobs_treated <- df_census_jobs %>% 
-left_join(treated_parishes, by = c("bplse2" = "parish_code"))  %>% 
-mutate(treated = case_when(
-    is.na(treated) ~ 0,
-    TRUE ~ treated
-)) %>% 
-rename(birth_parish_treated = treated)
 
-df_census_jobs_treated %>% 
-select(year, electricity_job_direct, electricity_job_indirect, birth_parish_treated)  %>% 
-count(year, electricity_job_indirect, birth_parish_treated)
+df_census_jobs_treated_and_control <- df_census_jobs %>%
+    left_join(treated_and_control_parishes_filtered, by = c("bplse2" = "parish_code")) %>%
+    rename(birth_parish_treated = treated)
+
+
+df_census_jobs_treated_and_control %>% count(birth_parish_treated)
+
+df_census_jobs_treated_and_control_filtered <- df_census_jobs_treated_and_control %>%
+    filter(!is.na(birth_parish_treated))
 ```
 
 
+Count the kinds of jobs in 1910 that emerged in the data
 
 ```{r}
-# Step 1: Summarize the data
-summary_df <- df_census_jobs_treated %>%
-    group_by(year, birth_parish_treated) %>%
-    summarise(
-        direct_jobs = sum(electricity_job_direct),
-        total_population = n()
-    )
-
-# Step 2: Calculate the proportion of electricity_job_direct
-summary_df <- summary_df %>%
+df_census_jobs_treated_and_control_filtered %>%
+    filter(year == 1910) %>%
+    filter(electricity_job_indirect == 1) %>%
+    group_by(birth_parish_treated) %>%
+    count(occstring, sort = TRUE) %>%
+    slice_max(n, n = 10) %>%
     mutate(
-        proportion_direct_jobs = direct_jobs / total_population
-    )
-
-# Step 3: Compute the standard error for each proportion
-summary_df <- summary_df %>%
-    mutate(
-        standard_error = sqrt((proportion_direct_jobs * (1 - proportion_direct_jobs)) / total_population)
-    )
-
-summary_df %>%
-    mutate(
-        upper_ci = proportion_direct_jobs + 1.96 * standard_error,
-        lower_ci = proportion_direct_jobs - 1.96 * standard_error,
-        birth_parish_treated = case_when(
-            birth_parish_treated == 0 ~ "Other Parishes",
-            birth_parish_treated == 1 ~ "Early Access to Electricity Parishes",
-            TRUE ~ "Error"
-        )
+        birth_parish_treated =
+            case_when(
+                birth_parish_treated == 0 ~ "Control Parishes",
+                birth_parish_treated == 1 ~ "Early Access to Electricity Parishes"
+            )
     ) %>%
-    ggplot(aes(x = year, y = proportion_direct_jobs, color = factor(birth_parish_treated))) +
-    geom_point() +
-    geom_line() +
-    geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci), width = 0.2) +
-    labs(
-        title = "Share of direct electricity jobs in the total number of jobs",
-        x = "Year",
-        y = "Share of electricity jobs",
-        colour = "Birth Parish Type"
-    )
-```
-
-
-
-```{r}
-# Step 1: Summarize the data
-summary_df <- df_census_jobs_treated %>%
-    group_by(year, birth_parish_treated) %>%
-    summarise(
-        indirect_jobs = sum(electricity_job_indirect),
-        total_population = n()
-    )
-
-# Step 2: Calculate the proportion of electricity_job_direct
-summary_df <- summary_df %>%
-    mutate(
-        proportion_indirect_jobs = indirect_jobs / total_population
-    )
-
-# Step 3: Compute the standard error for each proportion
-summary_df <- summary_df %>%
-    mutate(
-        standard_error = sqrt((proportion_indirect_jobs * (1 - proportion_indirect_jobs)) / total_population)
-    )
-
-summary_df %>%
-    mutate(
-        upper_ci = proportion_indirect_jobs + 1.96 * standard_error,
-        lower_ci = proportion_indirect_jobs - 1.96 * standard_error,
-        birth_parish_treated = case_when(
-            birth_parish_treated == 0 ~ "Other Parishes",
-            birth_parish_treated == 1 ~ "Early Access to Electricity Parishes",
-            TRUE ~ "Error"
-        )
+    gt() %>%
+    fmt_number(columns = vars(n), decimals = 0) %>%
+    row_group_order(
+        groups = c("Early Access to Electricity Parishes", "Control Parishes")
     ) %>%
-    ggplot(aes(x = year, y = proportion_indirect_jobs, color = factor(birth_parish_treated))) +
-    geom_point() +
-    geom_line() +
-    geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci), width = 0.2) +
-    labs(
-        title = "Share of indirect electricity jobs in the total number of jobs",
-        x = "Year",
-        y = "Share of electricity jobs",
-        colour = "Birth Parish Type"
-    )
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_row_groups()
+    ) %>%
+    cols_label(occstring = "Occupation", n = "Count") %>%
+    tab_header(
+        title = "Top 10 Most Common Indirect Electricity-Related Jobs in 1910"
+    ) %>% 
+    gtsave("data/temp/top_indirect_electricity_jobs_1910.png")
 ```
 
 
-
-
-
-```{r}
-# Load necessary libraries
-library(dplyr)
-library(lmtest)
-library(sandwich)
-
-# Fit the linear model (electricity_job_direct as dependent variable)
-model <- lm(electricity_job_direct ~ year + birth_parish_treated, data = df_census_jobs_treated)
-
-# Clustered standard errors at the level of "bplse2" (the parish variable)
-clustered_se <- vcovCL(model, cluster = ~ bplse2)
-
-# Get the summary of the model with clustered standard errors
-coeftest(model, vcov = clustered_se)
-
-```
-
-Logit model
+Alternative approach
 
 ```{r}
-# Logistic regression model for binary outcome
-model_logit <- glm(electricity_job_direct ~ year + birth_parish_treated, 
-                   data = df_census_jobs_treated, 
-                   family = binomial)
 
-# Clustered standard errors at the level of "bplse2"
-clustered_se_logit <- vcovCL(model_logit, cluster = ~ bplse2)
-
-# Get the summary of the logistic model with clustered standard errors
-coeftest(model_logit, vcov = clustered_se_logit)
-
-```
-
-```{r}
-# Load necessary packages
-library(ggplot2)
-library(dplyr)
-library(margins)
-
-# Step 1: Get predicted probabilities from the logistic model
-df_census_jobs_treated$predicted_prob <- predict(model_logit, type = "response")
-
-# Step 2: Summarize the predicted probabilities by year and birth_parish_treated
-summary_df <- df_census_jobs_treated %>%
+# Calculate the proportions of electricity_job_direct for each year and birth_parish_treated group
+proportion_df <- df_census_jobs_treated_and_control_filtered %>%
   group_by(year, birth_parish_treated) %>%
   summarise(
-    mean_pred = mean(predicted_prob),
-    se_pred = sqrt(mean(predicted_prob * (1 - predicted_prob)) / n())
-  ) %>%
-  ungroup()
-
-# Step 3: Calculate the difference in proportions between treated and untreated groups
-diff_df <- summary_df %>%
-  spread(birth_parish_treated, mean_pred) %>%
-  mutate(
-    diff = `1` - `0`,
-    se_diff = sqrt((`1` * (1 - `1`) / sum(df_census_jobs_treated$birth_parish_treated == 1)) +
-                   (`0` * (1 - `0`) / sum(df_census_jobs_treated$birth_parish_treated == 0)))
+    n_total = n(),
+    n_electricity = sum(electricity_job_direct),
+    proportion = n_electricity / n_total
   )
 
-# Step 4: Plot the difference in proportions with error bars
-ggplot(diff_df, aes(x = year, y = diff)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = diff - 1.96 * se_diff, ymax = diff + 1.96 * se_diff), width = 0.2) +
-  labs(title = "Difference in Proportion of Direct Electricity Jobs",
-       x = "Year",
-       y = "Difference in Proportion (Treated - Untreated)") +
-  theme_minimal()
+# Reshape the data to have both groups on the same row
+diff_df <- proportion_df %>%
+  pivot_wider(
+    names_from = birth_parish_treated,
+    values_from = proportion,
+    names_prefix = "proportion_"
+  ) %>%
+  mutate(difference = proportion_1 - proportion_0)
 
+diff_df <- diff_df %>%
+  mutate(
+    proportion_0 = replace_na(proportion_0, 0),
+    proportion_1 = replace_na(proportion_1, 0),
+    difference = proportion_1 - proportion_0
+  )
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Step 1: Calculate the proportions of electricity_job_direct for each year and group
+# Calculate the proportions of electricity_job_direct for each year and birth_parish_treated group
+proportion_df <- df_census_jobs_treated_and_control_filtered %>%
+    group_by(year, birth_parish_treated) %>%
+    summarise(
+        n_total = n(),
+        n_electricity = sum(electricity_job_direct),
+        proportion = n_electricity / n_total
+    )
+
+proportion_df <- proportion_df %>%
+    select(year, birth_parish_treated, proportion, n_total) %>%
+    pivot_wider(names_from = birth_parish_treated, values_from = c(proportion, n_total)) %>%
+    mutate(difference = proportion_1 - proportion_0) %>%
+    mutate(se_diff = sqrt(
+        (proportion_0 * (1 - proportion_0) / n_total_0) +
+            (proportion_1 * (1 - proportion_1) / n_total_1)
+    ))
+
+
+proportion_df %>%
+    ggplot(aes(x = year, y = difference)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(
+        title = "Difference in Proportion of Direct Electricity Jobs",
+        x = "Year",
+        y = "Difference in Proportion (Treated - Untreated)"
+    ) +
+    theme_minimal() +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.001))
+
+```
+
+
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Step 1: Calculate the proportions of electricity_job_direct for each year and group
+# Calculate the proportions of electricity_job_direct for each year and birth_parish_treated group
+proportion_df <- df_census_jobs_treated_and_control_filtered %>%
+    group_by(year, birth_parish_treated) %>%
+    summarise(
+        n_total = n(),
+        n_electricity = sum(electricity_job_indirect),
+        proportion = n_electricity / n_total
+    )
+
+proportion_df <- proportion_df %>%
+    select(year, birth_parish_treated, proportion, n_total) %>%
+    pivot_wider(names_from = birth_parish_treated, values_from = c(proportion, n_total)) %>%
+    mutate(difference = proportion_1 - proportion_0) %>%
+    mutate(se_diff = sqrt(
+        (proportion_0 * (1 - proportion_0) / n_total_0) +
+            (proportion_1 * (1 - proportion_1) / n_total_1)
+    ))
+
+
+proportion_df %>%
+    ggplot(aes(x = year, y = difference)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(
+        title = "Difference in Proportion of Direct Electricity Jobs",
+        x = "Year",
+        y = "Difference in Proportion (Treated - Untreated)"
+    ) +
+    theme_minimal() +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) 
+
+```
+
+
+Combining into one graph
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Step 1: Calculate the proportions of electricity_job_direct for each year and group
+# Calculate the proportions of electricity_job_direct for each year and birth_parish_treated group
+proportion_df <- df_census_jobs_treated_and_control_filtered %>%
+    group_by(year, birth_parish_treated) %>%
+    summarise(
+        n_total = n(),
+        n_electricity = sum(electricity_job_direct),
+        proportion = n_electricity / n_total
+    )
+
+proportion_df <- proportion_df %>%
+    select(year, birth_parish_treated, proportion, n_total) %>%
+    pivot_wider(names_from = birth_parish_treated, values_from = c(proportion, n_total)) %>%
+    mutate(difference = proportion_1 - proportion_0) %>%
+    mutate(se_diff = sqrt(
+        (proportion_0 * (1 - proportion_0) / n_total_0) +
+            (proportion_1 * (1 - proportion_1) / n_total_1)
+    ))
+
+
+proportion_df_1 <- proportion_df %>%
+    mutate(job_type = "Direct Electricity Jobs")
+
+
+proportion_df <- df_census_jobs_treated_and_control_filtered %>%
+    group_by(year, birth_parish_treated) %>%
+    summarise(
+        n_total = n(),
+        n_electricity = sum(electricity_job_indirect),
+        proportion = n_electricity / n_total
+    )
+
+proportion_df <- proportion_df %>%
+    select(year, birth_parish_treated, proportion, n_total) %>%
+    pivot_wider(names_from = birth_parish_treated, values_from = c(proportion, n_total)) %>%
+    mutate(difference = proportion_1 - proportion_0) %>%
+    mutate(se_diff = sqrt(
+        (proportion_0 * (1 - proportion_0) / n_total_0) +
+            (proportion_1 * (1 - proportion_1) / n_total_1)
+    ))
+
+proportion_df_2 <- proportion_df %>%
+    mutate(job_type = "Indirect Electricity Jobs")
+
+
+proportion_df <- rbind(proportion_df_1, proportion_df_2)
+
+proportion_df %>%
+    ggplot(aes(x = year, y = difference, colour = job_type)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff, colour = job_type), width = 0.2) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+    labs(
+        title = "Difference in Proportion of Electricity Jobs",
+        x = "Year",
+        y = "Difference in Share of Electricity Jobs\nBetween Early Access to Electricity Parishes and Other Parishes",
+        colour = "Job Type"
+    ) +
+    theme_minimal() +
+    scale_colour_brewer(palette = "Dark2") +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.1))
 ```
 
 
@@ -909,7 +934,53 @@ ggplot(diff_df, aes(x = year, y = diff)) +
 
 
 
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 
+# Define a function to calculate proportions, differences, and plot
+plot_difference_in_proportions <- function(data, job_type) {
+    # Step 1: Calculate the proportions of the specified job type for each year and group
+    proportion_df <- data %>%
+        group_by(year, birth_parish_treated) %>%
+        summarise(
+            n_total = n(),
+            n_electricity = sum({{ job_type }}), # Dynamically reference the job type variable
+            proportion = n_electricity / n_total
+        )
+
+    # Step 2: Reshape the data and calculate the difference and standard error
+    proportion_df <- proportion_df %>%
+        pivot_wider(names_from = birth_parish_treated, values_from = proportion, names_prefix = "proportion_") %>%
+        left_join(
+            proportion_df %>% select(year, birth_parish_treated, n_total) %>%
+                pivot_wider(names_from = birth_parish_treated, values_from = n_total, names_prefix = "n_total_"),
+            by = "year"
+        ) %>%
+        mutate(difference = proportion_1 - proportion_0) %>%
+        mutate(se_diff = sqrt(
+            (proportion_0 * (1 - proportion_0) / n_total_0) +
+                (proportion_1 * (1 - proportion_1) / n_total_1)
+        ))
+
+    # Step 3: Plot the results
+    proportion_df %>%
+        ggplot(aes(x = year, y = difference)) +
+        geom_point() +
+        geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
+        labs(
+            title = paste("Difference in Proportion of", job_type, "Jobs"),
+            x = "Year",
+            y = "Difference in Proportion (Treated - Untreated)"
+        ) +
+        theme_minimal()
+}
+
+# Example usage: Specify either "electricity_job_direct" or "electricity_job_indirect"
+plot_difference_in_proportions(df_census_jobs_treated, "electricity_job_direct")
+
+```
 
 
 ```{r}
@@ -962,3 +1033,219 @@ df_census_jobs_treated %>%
 ```
 
 
+Read in the 1930 data
+
+```{r}
+library(haven)
+
+df_census_1930 <- read_dta("data/census/1930_census_regression_dataset_excl_unbalanced_controls.dta")
+
+df_census_1930 %>%
+    colnames()
+
+df_census_1930_filtered <- df_census_1930 %>%
+    select(electricity_job_direct, electricity_job_indirect, birth_parish_treated) %>%
+    mutate(year = 1930)
+
+
+df_census_jobs_treated_and_control_filtered_collected <- df_census_jobs_treated_and_control_filtered %>%
+    select(year, birth_parish_treated, electricity_job_direct, electricity_job_indirect) %>%
+    rbind(df_census_1930_filtered)
+
+
+
+
+# Step 1: Calculate the proportions of electricity_job_direct for each year and group
+# Calculate the proportions of electricity_job_direct for each year and birth_parish_treated group
+proportion_df <- df_census_jobs_treated_and_control_filtered_collected %>%
+    group_by(year, birth_parish_treated) %>%
+    summarise(
+        n_total = n(),
+        n_electricity = sum(electricity_job_direct),
+        proportion = n_electricity / n_total
+    )
+
+proportion_df <- proportion_df %>%
+    select(year, birth_parish_treated, proportion, n_total) %>%
+    pivot_wider(names_from = birth_parish_treated, values_from = c(proportion, n_total)) %>%
+    mutate(difference = proportion_1 - proportion_0) %>%
+    mutate(se_diff = sqrt(
+        (proportion_0 * (1 - proportion_0) / n_total_0) +
+            (proportion_1 * (1 - proportion_1) / n_total_1)
+    ))
+
+
+proportion_df %>%
+    ggplot(aes(x = year, y = difference)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(
+        title = "Difference in Proportion of Direct Electricity Jobs",
+        x = "Year",
+        y = "Difference in Proportion (Treated - Untreated)"
+    ) +
+    theme_minimal() +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.001))
+
+```
+
+
+
+Going long
+
+
+```{r}
+# Step 1: Calculate the proportions of electricity_job_direct for each year and group
+# Calculate the proportions of electricity_job_indirect for each year and birth_parish_treated group
+proportion_df <- df_census_jobs_treated_and_control_filtered_collected %>%
+    group_by(year, birth_parish_treated) %>%
+    summarise(
+        n_total = n(),
+        n_electricity = sum(electricity_job_indirect),
+        proportion = n_electricity / n_total
+    )
+
+proportion_df <- proportion_df %>%
+    select(year, birth_parish_treated, proportion, n_total) %>%
+    pivot_wider(names_from = birth_parish_treated, values_from = c(proportion, n_total)) %>%
+    mutate(difference = proportion_1 - proportion_0) %>%
+    mutate(se_diff = sqrt(
+        (proportion_0 * (1 - proportion_0) / n_total_0) +
+            (proportion_1 * (1 - proportion_1) / n_total_1)
+    ))
+
+
+proportion_df %>%
+    ggplot(aes(x = year, y = difference)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    labs(
+        title = "Difference in Proportion of Direct Electricity Jobs",
+        x = "Year",
+        y = "Difference in Proportion (Treated - Untreated)"
+    ) +
+    theme_minimal() +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.001))
+
+```
+
+
+
+
+```{r}
+# Step 1: Calculate the proportions of electricity_job_direct and electricity_job_indirect for each year and group
+proportion_df <- df_census_jobs_treated_and_control_filtered_collected %>%
+    group_by(year, birth_parish_treated) %>%
+    summarise(
+        n_total = n(),
+        n_electricity_indirect = sum(electricity_job_indirect),
+        n_electricity_direct = sum(electricity_job_direct),
+        proportion_indirect = n_electricity_indirect / n_total,
+        proportion_direct = n_electricity_direct / n_total
+    )
+
+# Pivot wider to handle both direct and indirect calculations in one dataframe
+proportion_df <- proportion_df %>%
+    select(year, birth_parish_treated, proportion_indirect, proportion_direct, n_total) %>%
+    pivot_wider(
+        names_from = birth_parish_treated,
+        values_from = c(proportion_indirect, proportion_direct, n_total)
+    ) %>%
+    mutate(
+        difference_indirect = proportion_indirect_1 - proportion_indirect_0,
+        difference_direct = proportion_direct_1 - proportion_direct_0,
+        se_diff_indirect = sqrt(
+            (proportion_indirect_0 * (1 - proportion_indirect_0) / n_total_0) +
+                (proportion_indirect_1 * (1 - proportion_indirect_1) / n_total_1)
+        ),
+        se_diff_direct = sqrt(
+            (proportion_direct_0 * (1 - proportion_direct_0) / n_total_0) +
+                (proportion_direct_1 * (1 - proportion_direct_1) / n_total_1)
+        )
+    )
+
+
+
+
+proportion_df %>%
+    select(year, difference_indirect, difference_direct, se_diff_indirect, se_diff_direct) %>%
+    pivot_longer(cols = -year) %>%
+    mutate(group = str_extract(name, "indirect|direct")) %>%
+    mutate(indicator = str_extract(name, "difference|se_diff")) %>%
+    select(-name) %>%
+    ungroup() %>%
+    pivot_wider(names_from = indicator, values_from = value) %>%
+    mutate(group = case_when(
+        group == "indirect" ~ "Indirect Electricity Jobs",
+        group == "direct" ~ "Direct Electricity Jobs"
+    )) %>%
+    ggplot(aes(x = year, y = difference, colour = group)) +
+    geom_hline(yintercept = 0, linetype = 1, color = "black") +
+    geom_vline(xintercept = 1909, linetype = "dashed") +
+    geom_point() +
+    geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
+    labs(
+        # title = "Difference in Share of Electricity Related Jobs",
+        x = "Year",
+        y = "Difference in Share of Jobs \n(Early Access to Electricity - Other Parishes)",
+        colour = "Job type",
+        caption = "Note: dotted line indicates the year Olidan Power Station was built"
+    ) +
+    theme_minimal() +
+    scale_colour_brewer(palette = "Dark2") +
+    # facet_wrap(~group, scales = "free_y", nrow = 2) +
+    theme(legend.position = "bottom") +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.01))
+
+
+```
+
+
+
+Excluding 1910
+
+
+```{r}
+jpeg(here::here("figures", "event_study_excl_1910_same_y_axis.png"),
+    width = 6, height = 6, units = "in", res = 300
+)
+
+
+proportion_df %>% 
+    filter(year != 1910) %>%
+    select(year, difference_indirect, difference_direct, se_diff_indirect, se_diff_direct) %>%
+    pivot_longer(cols = -year) %>%
+    mutate(group = str_extract(name, "indirect|direct")) %>%
+    mutate(indicator = str_extract(name, "difference|se_diff")) %>%
+    select(-name) %>%
+    ungroup() %>%
+    pivot_wider(names_from = indicator, values_from = value) %>%
+    mutate(group = case_when(
+        group == "indirect" ~ "Indirect Electricity Jobs",
+        group == "direct" ~ "Direct Electricity Jobs"
+    )) %>%
+    ggplot(aes(x = year, y = difference, colour = group)) +
+    geom_hline(yintercept = 0, linetype = 1, color = "black") +
+    geom_vline(xintercept = 1909, linetype = "dashed") +
+    geom_point() +
+    geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
+    labs(
+        # title = "Difference in Share of Electricity Related Jobs",
+        x = "Year",
+        y = "Difference in Share of Jobs \n(Early Access to Electricity - Other Parishes)",
+        colour = "Job type",
+        caption = "Note: dotted line indicates the year Olidan Power Station was built"
+    ) +
+    theme_minimal() +
+    scale_colour_brewer(palette = "Dark2") +
+    facet_wrap(~group,
+        # scales = "free_y",
+        nrow = 2
+    ) +
+    theme(legend.position = "bottom") +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.01))
+
+dev.off()
+```
