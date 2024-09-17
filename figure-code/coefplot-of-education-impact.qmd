@@ -40,7 +40,7 @@ ggplot(df, aes(y = variable, x = coefficient)) +
   geom_point() +
   geom_errorbarh(aes(xmin = lower_ci, xmax = upper_ci), height = 0.2) +
   theme_minimal() +
-  labs(x = "Magnitude of Regression Coefficient for\nVariable Interacted with Birth Parish (Treated)", y = "Variable Interacted with Birth Parish (Treated)") +
+  labs(x = "Magnitude of Regression Coefficient for\nVariable Interacted with Western Line Birth Parish", y = "Variable Interacted with Western Line Birth Parish") +
   theme(
     # panel.grid.major.y = element_blank(),
     panel.grid.minor.y = element_blank(),

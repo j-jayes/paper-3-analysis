@@ -15,6 +15,20 @@ library(ipumsr)
 library(tidyverse)
 library(gt)
 
+library(tidyverse)
+library(here)
+library(arrow)
+library(ggtext)
+library(showtext)
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("IBM Plex Mono", "ibm")
+font_add_google("Roboto", "roboto")
+
+showtext_opts(dpi = 300)
+showtext_auto(enable = TRUE)
+theme_set(theme_light())
+
+
 # Example data
 df_census_all <- read_ipums_micro("data/census/ipumsi_00010.xml")
 
@@ -23,7 +37,7 @@ df_census_all_clean_names <- df_census_all %>%
 
 df_census_short <- df_census_all_clean_names %>%
     # select the relevant columns
-    select(year, contains("occ"), parse, bplse1, bplse2) %>%
+    select(year, contains("occ"), parse, bplse1, bplse2, sex, birthyr) %>%
     # remove labels to make files smaller
     zap_labels() %>%
     mutate(occstring = case_when(
@@ -647,25 +661,32 @@ electricity_jobs_indirect_list_tidy <- electricity_jobs_indirect_list %>%
     str_squish()
 
 df_census_jobs <- df_census_short %>%
-    mutate(electricity_job_indirect = sapply(occstring, function(x) {
-        if (x %in% electricity_jobs_indirect_list_tidy) {
-            return(1)
-        } else {
-            return(0)
-        }
-    }))
+    mutate(electricity_job_indirect = if_else(occstring %in% electricity_jobs_indirect_list_tidy, 1, 0))
+
+df_census_jobs <- df_census_jobs %>%
+    mutate(age = year - birthyr) %>%
+    select(-birthyr) %>% 
+    mutate(female = case_when(
+        sex == 1 ~ 0,
+        sex == 2 ~ 1
+    )) %>% 
+    select(-sex)
 
 # df_census_jobs %>% write_rds("data/parishes/df_census_jobs_temp.rds")
 ```
 
 
+```{r}
+df_census_jobs <- read_rds("data/parishes/df_census_jobs_temp.rds")
+```
+
 Export list of 500 most common occupations that are not electricity jobs
 ```{r}
-df_census_jobs %>%
-    filter(electricity_job_direct == 0 & electricity_job_indirect == 0) %>%
-    count(occstring, sort = TRUE) %>%
-    head(500) %>%
-    write_excel_csv("data/parishes/500_most_common_occupations_not_electricity_jobs.csv")
+# df_census_jobs %>%
+#     filter(electricity_job_direct == 0 & electricity_job_indirect == 0) %>%
+#     count(occstring, sort = TRUE) %>%
+#     head(500) %>%
+#     write_excel_csv("data/parishes/500_most_common_occupations_not_electricity_jobs.csv")
 ```
 
 ```{r}
@@ -693,88 +714,282 @@ df_census_jobs %>%
 treated_and_control_parishes <- readxl::read_excel("data/parishes/treated_parishes_with_distance_threshold_and_population.xlsx")
 
 treated_and_control_parishes_filtered <- treated_and_control_parishes %>%
-    filter(distance_to_line <= 300,
-    !is.na(population_1930)) %>% 
-    mutate(parish_code = str_remove(parish_code, "SE/"),
-    parish_code = as.numeric(parish_code)) %>%
+    filter(
+        distance_to_line <= 300,
+        !is.na(population_1930)
+    ) %>%
+    mutate(
+        parish_code = str_remove(parish_code, "SE/"),
+        parish_code = as.numeric(parish_code)
+    ) %>%
     select(parish_code, treated) %>%
-    distinct() 
+    distinct()
 
 
 df_census_jobs_treated_and_control <- df_census_jobs %>%
     left_join(treated_and_control_parishes_filtered, by = c("bplse2" = "parish_code")) %>%
-    rename(birth_parish_treated = treated)
+    rename(
+        birth_parish_treated = treated,
+        birth_parish_ref_code = bplse2
+    )
 
-
-df_census_jobs_treated_and_control %>% count(birth_parish_treated)
 
 df_census_jobs_treated_and_control_filtered <- df_census_jobs_treated_and_control %>%
-    filter(!is.na(birth_parish_treated))
+    filter(!is.na(birth_parish_treated)) %>%
+    # test if we filter out all of the individuals with no occupation
+    filter(occstring != "") %>%
+    select(-occstring, -parse)
 ```
 
 
 Count the kinds of jobs in 1910 that emerged in the data
 
 ```{r}
-df_census_jobs_treated_and_control_filtered %>%
-    filter(year == 1910) %>%
-    filter(electricity_job_indirect == 1) %>%
-    group_by(birth_parish_treated) %>%
-    count(occstring, sort = TRUE) %>%
-    slice_max(n, n = 10) %>%
-    mutate(
-        birth_parish_treated =
-            case_when(
-                birth_parish_treated == 0 ~ "Control Parishes",
-                birth_parish_treated == 1 ~ "Early Access to Electricity Parishes"
-            )
-    ) %>%
-    gt() %>%
-    fmt_number(columns = vars(n), decimals = 0) %>%
-    row_group_order(
-        groups = c("Early Access to Electricity Parishes", "Control Parishes")
-    ) %>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_row_groups()
-    ) %>%
-    cols_label(occstring = "Occupation", n = "Count") %>%
-    tab_header(
-        title = "Top 10 Most Common Indirect Electricity-Related Jobs in 1910"
-    ) %>% 
-    gtsave("data/temp/top_indirect_electricity_jobs_1910.png")
+# df_census_jobs_treated_and_control_filtered %>%
+#     filter(year == 1910) %>%
+#     filter(electricity_job_indirect == 1) %>%
+#     group_by(birth_parish_treated) %>%
+#     count(occstring, sort = TRUE) %>%
+#     slice_max(n, n = 10) %>%
+#     mutate(
+#         birth_parish_treated =
+#             case_when(
+#                 birth_parish_treated == 0 ~ "Control Parishes",
+#                 birth_parish_treated == 1 ~ "Western Line parishes"
+#             )
+#     ) %>%
+#     gt() %>%
+#     fmt_number(columns = vars(n), decimals = 0) %>%
+#     row_group_order(
+#         groups = c("Western Line parishes", "Control Parishes")
+#     ) %>%
+#     tab_style(
+#         style = cell_text(weight = "bold"),
+#         locations = cells_row_groups()
+#     ) %>%
+#     cols_label(occstring = "Occupation", n = "Count") %>%
+#     tab_header(
+#         title = "Top 10 Most Common Indirect Electricity-Related Jobs in 1910"
+#     ) %>% 
+#     gtsave("data/temp/top_indirect_electricity_jobs_1910.png")
 ```
 
-
-Alternative approach
+Read in the 1930 data
 
 ```{r}
+library(haven)
 
-# Calculate the proportions of electricity_job_direct for each year and birth_parish_treated group
-proportion_df <- df_census_jobs_treated_and_control_filtered %>%
-  group_by(year, birth_parish_treated) %>%
-  summarise(
-    n_total = n(),
-    n_electricity = sum(electricity_job_direct),
-    proportion = n_electricity / n_total
-  )
+df_census_1930 <- read_dta("data/census/1930_census_regression_dataset_excl_unbalanced_controls.dta")
 
-# Reshape the data to have both groups on the same row
-diff_df <- proportion_df %>%
-  pivot_wider(
-    names_from = birth_parish_treated,
-    values_from = proportion,
-    names_prefix = "proportion_"
-  ) %>%
-  mutate(difference = proportion_1 - proportion_0)
+df_census_1930_filtered <- df_census_1930 %>%
+# again checking if we filter out all employed == 0
+filter(employed == 1) %>%
+    select(
+        electricity_job_direct,
+        electricity_job_indirect,
+        birth_parish_treated,
+        age,
+        female,
+        birth_parish_ref_code
+    ) %>%
+    mutate(year = 1930,
+    birth_parish_ref_code = str_remove(birth_parish_ref_code, "SE/"),
+    birth_parish_ref_code = as.numeric(birth_parish_ref_code))
 
-diff_df <- diff_df %>%
-  mutate(
-    proportion_0 = replace_na(proportion_0, 0),
-    proportion_1 = replace_na(proportion_1, 0),
-    difference = proportion_1 - proportion_0
-  )
+df_census_jobs_treated_and_control_filtered %>% colnames()
+df_census_1930_filtered %>% colnames()
+
+df_census_jobs_treated_and_control_filtered_collected <- df_census_jobs_treated_and_control_filtered %>%
+    rbind(df_census_1930_filtered)
+
 ```
+
+
+
+```{r}
+# df_census_jobs_treated_and_control_filtered_collected %>% write_dta("data/census/census_1880_1930_event_study.dta")
+
+df_census_jobs_treated_and_control_filtered_collected <- read_dta("data/census/census_1880_1930_event_study.dta")
+
+# df_census_jobs_treated_and_control_filtered_collected %>% filter(str_detect(birth_parish_ref_code, "SE"))
+
+df_census_jobs_treated_and_control_filtered_collected %>%
+    slice_sample(n = 100) %>%
+    write_csv("data/temp/sample_event_study_data.csv")
+```
+
+
+
+Electricity Job Indirect
+
+```{r}
+library(haven)
+
+indirect_est_1 <- read_dta("indirect_est_1.dta") %>%
+    janitor::clean_names() %>%
+    select(year, b_birth_parish_treated, se_birth_parish_treated) %>%
+    mutate(specification = "Birth Parish Treated")
+
+
+indirect_est_2 <- read_dta("indirect_est_2.dta") %>%
+    janitor::clean_names() %>%
+    select(year, b_birth_parish_treated, se_birth_parish_treated) %>%
+    mutate(specification = "Birth Parish Treated + individual controls")
+
+
+indirect_est_3 <- read_dta("indirect_est_3.dta") %>%
+    janitor::clean_names() %>%
+    select(year, b_birth_parish_treated, se_birth_parish_treated) %>%
+    mutate(specification = "Birth Parish Treated + individual controls + Parish FE")
+
+
+indirect_est_combined <- indirect_est_1 %>%
+    bind_rows(indirect_est_2) %>% 
+    # bind_rows(indirect_est_3) %>% 
+    mutate(outcome_var = "Indirect")
+
+indirect_est_combined %>%
+    ggplot(aes(x = year, y = b_birth_parish_treated)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = b_birth_parish_treated - 1.96 * se_birth_parish_treated, ymax = b_birth_parish_treated + 1.96 * se_birth_parish_treated), width = 0.2) +
+    facet_wrap(~specification, nrow = 2) 
+
+ggsave("data/temp/indirect_est_combined.png")
+```
+
+
+```{r}
+direct_est_1 <- read_dta("direct_est_1.dta") %>%
+    janitor::clean_names() %>%
+    select(year, b_birth_parish_treated, se_birth_parish_treated) %>%
+    mutate(specification = "Birth Parish Treated")
+
+
+direct_est_2 <- read_dta("direct_est_2.dta") %>%
+    janitor::clean_names() %>%
+    select(year, b_birth_parish_treated, se_birth_parish_treated) %>%
+    mutate(specification = "Birth Parish Treated + individual controls")
+
+
+direct_est_3 <- read_dta("direct_est_3.dta") %>%
+    janitor::clean_names() %>%
+    select(year, b_birth_parish_treated, se_birth_parish_treated) %>%
+    mutate(specification = "Birth Parish Treated + individual controls + Parish FE")
+
+
+direct_est_combined <- direct_est_1 %>%
+    bind_rows(direct_est_2) %>% 
+    # bind_rows(direct_est_3) %>% 
+    mutate(outcome_var = "Direct")
+
+
+direct_est_combined %>%
+    ggplot(aes(x = year, y = b_birth_parish_treated, colour = specification)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = b_birth_parish_treated - 1.96 * se_birth_parish_treated, ymax = b_birth_parish_treated + 1.96 * se_birth_parish_treated), width = 0.2) +
+    facet_wrap(~specification, nrow = 2) +
+    scale_colour_brewer(palette = "Dark2") 
+
+ggsave("data/temp/direct_est_combined.png")
+```
+
+
+
+
+```{r}
+ests_combined <- direct_est_combined %>%
+    bind_rows(indirect_est_combined) %>%
+    mutate(outcome_var = factor(outcome_var, levels = c("Direct", "Indirect")))
+
+ests_combined %>%
+    ggplot(aes(x = year, y = b_birth_parish_treated, colour = specification)) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "darkred") +
+    # make a shaded region with geom rect from 1909 to 1922
+    geom_rect(aes(xmin = 1909, xmax = 1922, ymin = -Inf, ymax = Inf), fill = "grey", alpha = 0.2, colour = "grey") +
+    geom_point() +
+    geom_errorbar(aes(ymin = b_birth_parish_treated - 1.96 * se_birth_parish_treated, ymax = b_birth_parish_treated + 1.96 * se_birth_parish_treated), width = 0.2) +
+    facet_grid(outcome_var~specification) +
+    scale_colour_brewer(palette = "Dark2") +
+    theme(legend.position = "none") +
+    labs(x = "Year", y = "LPM Estimate for Holding an Electricity Related Job", caption = "Note: Shaded region represents the construction period for the Western Line\nEach regression has standard errors clustered at the parish level")
+
+ggsave("data/temp/direct_est_combined.png")
+ ```
+
+
+
+
+```{r}
+# ests_combined %>%
+#     mutate(outcome_var = case_when(
+#         outcome_var == "Direct" ~ "Direct Electricity Jobs",
+#         outcome_var == "Indirect" ~ "Indirect Electricity Jobs"
+#     )) %>%
+#     filter(
+#         specification != "Birth Parish Treated + individual controls",
+#         year != 1910
+#     ) %>%
+#     ggplot(aes(x = year, y = b_birth_parish_treated, colour = outcome_var)) +
+#     geom_hline(yintercept = 0, linetype = 1, color = "black") +
+#     # make a shaded region with geom rect from 1909 to 1922
+#     geom_rect(aes(xmin = 1909, xmax = 1922, ymin = -Inf, ymax = Inf), fill = "grey", alpha = 0.2, colour = "grey") +
+#     geom_point() +
+#     geom_errorbar(aes(ymin = b_birth_parish_treated - 1.96 * se_birth_parish_treated, ymax = b_birth_parish_treated + 1.96 * se_birth_parish_treated), width = 0.2) +
+#     facet_wrap(~outcome_var, nrow = 2) +
+#     scale_colour_brewer(palette = "Dark2") +
+#     theme_minimal() +
+#     theme(
+#         legend.position = "bottom",
+#         text = element_text(family = "ibm", size = 18)
+#     ) +
+#     labs(
+#         x = "Year",
+#         y = "LPM Estimate for Holding an Electricity Related Job",
+#         colour = "Job Type",
+#         caption = "Note: Shaded region represents the construction period for the Western Line\nEach regression has standard errors clustered at the parish level"
+#     )
+
+
+# ggsave("figures/16-event-study_same_scale.jpeg", device = "jpeg", width = 290, height = 231, units = "mm", dpi = 200)
+
+ests_combined %>%
+    mutate(outcome_var = case_when(
+        outcome_var == "Direct" ~ "Direct Electricity Jobs",
+        outcome_var == "Indirect" ~ "Indirect Electricity Jobs"
+    )) %>%
+    filter(
+        specification != "Birth Parish Treated + individual controls",
+        year != 1910
+    ) %>%
+    ggplot(aes(x = year, y = b_birth_parish_treated, colour = outcome_var)) +
+    geom_hline(yintercept = 0, linetype = 1, color = "black") +
+    # make a shaded region with geom rect from 1909 to 1922
+    geom_rect(aes(xmin = 1909, xmax = 1922, ymin = -Inf, ymax = Inf), fill = "grey", alpha = 0.2, colour = "grey") +
+    geom_point() +
+    geom_errorbar(aes(ymin = b_birth_parish_treated - 1.96 * se_birth_parish_treated, ymax = b_birth_parish_treated + 1.96 * se_birth_parish_treated), width = 0.2) +
+    facet_wrap(~outcome_var, nrow = 2, scales = "free_y") +
+    scale_colour_brewer(palette = "Dark2") +
+    theme_minimal() +
+    scale_y_continuous(labels = scales::number_format(scale = 100)) +
+    theme(
+        legend.position = "bottom",
+        text = element_text(family = "ibm", size = 18)
+    ) +
+    labs(
+        x = "Year",
+        y = "LPM Estimate for Holding an Electricity Related Job\n(y-axis scaled by 100)",
+        colour = "Job Type",
+        # caption = "Note: Shaded region represents the construction period for the Western Line\nStandard errors clustered at the parish level"
+    )
+
+ggsave("figures/16-event-study_job_type.jpeg", device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+
+```
+
+
+
+
+
 
 
 ```{r}
@@ -920,7 +1135,7 @@ proportion_df %>%
     labs(
         title = "Difference in Proportion of Electricity Jobs",
         x = "Year",
-        y = "Difference in Share of Electricity Jobs\nBetween Early Access to Electricity Parishes and Other Parishes",
+        y = "Difference in Share of Electricity Jobs\nBetween Western Line parishes and Control Parishes",
         colour = "Job Type"
     ) +
     theme_minimal() +
@@ -932,127 +1147,59 @@ proportion_df %>%
 
 
 
-
-
 ```{r}
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-
-# Define a function to calculate proportions, differences, and plot
-plot_difference_in_proportions <- function(data, job_type) {
-    # Step 1: Calculate the proportions of the specified job type for each year and group
-    proportion_df <- data %>%
-        group_by(year, birth_parish_treated) %>%
-        summarise(
-            n_total = n(),
-            n_electricity = sum({{ job_type }}), # Dynamically reference the job type variable
-            proportion = n_electricity / n_total
-        )
-
-    # Step 2: Reshape the data and calculate the difference and standard error
-    proportion_df <- proportion_df %>%
-        pivot_wider(names_from = birth_parish_treated, values_from = proportion, names_prefix = "proportion_") %>%
-        left_join(
-            proportion_df %>% select(year, birth_parish_treated, n_total) %>%
-                pivot_wider(names_from = birth_parish_treated, values_from = n_total, names_prefix = "n_total_"),
-            by = "year"
-        ) %>%
-        mutate(difference = proportion_1 - proportion_0) %>%
-        mutate(se_diff = sqrt(
-            (proportion_0 * (1 - proportion_0) / n_total_0) +
-                (proportion_1 * (1 - proportion_1) / n_total_1)
-        ))
-
-    # Step 3: Plot the results
-    proportion_df %>%
-        ggplot(aes(x = year, y = difference)) +
-        geom_point() +
-        geom_errorbar(aes(ymin = difference - 1.96 * se_diff, ymax = difference + 1.96 * se_diff), width = 0.2) +
-        labs(
-            title = paste("Difference in Proportion of", job_type, "Jobs"),
-            x = "Year",
-            y = "Difference in Proportion (Treated - Untreated)"
-        ) +
-        theme_minimal()
-}
-
-# Example usage: Specify either "electricity_job_direct" or "electricity_job_indirect"
-plot_difference_in_proportions(df_census_jobs_treated, "electricity_job_direct")
-
+# df_census_jobs_treated %>%
+#     filter(electricity_job_direct == 1) %>%
+#     count(year, occstring, sort = T) %>%
+#     group_by(year) %>%
+#     slice_max(n = 10, order_by = n, with_ties = F) %>%
+#     gt() %>%
+#     tab_header(
+#         title = "Top direct electricity jobs",
+#         subtitle = "Number of jobs by year"
+#     ) %>%
+#     fmt_number(
+#         columns = vars(n),
+#         decimals = 0
+#     ) %>%
+#     tab_style(
+#         style = cell_text(weight = "bold"),
+#         locations = cells_row_groups()
+#     )  %>% 
+#     gtsave("data/temp/top_direct_electricity_jobs.png")
 ```
 
 
 ```{r}
-df_census_jobs_treated %>%
-    filter(electricity_job_direct == 1) %>%
-    count(year, occstring, sort = T) %>%
-    group_by(year) %>%
-    slice_max(n = 10, order_by = n, with_ties = F) %>%
-    gt() %>%
-    tab_header(
-        title = "Top direct electricity jobs",
-        subtitle = "Number of jobs by year"
-    ) %>%
-    fmt_number(
-        columns = vars(n),
-        decimals = 0
-    ) %>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_row_groups()
-    )  %>% 
-    gtsave("data/temp/top_direct_electricity_jobs.png")
+# df_census_jobs_treated %>%
+#     filter(electricity_job_indirect == 1) %>%
+#     count(year, occstring, sort = T) %>%
+#     group_by(year) %>%
+#     slice_max(n = 10, order_by = n, with_ties = F) %>%
+#     gt() %>%
+#     tab_header(
+#         title = "Top indirect electricity jobs",
+#         subtitle = "Number of jobs by year"
+#     ) %>%
+#     fmt_number(
+#         columns = vars(n),
+#         decimals = 0
+#     ) %>%
+#     tab_style(
+#         style = cell_text(weight = "bold"),
+#         locations = cells_row_groups()
+#     ) %>%
+#     cols_label(
+#         n = "Number of jobs",
+#         occstring = "Title"
+#     ) %>% 
+#         gtsave("data/temp/top_indirect_electricity_jobs.png")
 ```
 
 
-```{r}
-df_census_jobs_treated %>%
-    filter(electricity_job_indirect == 1) %>%
-    count(year, occstring, sort = T) %>%
-    group_by(year) %>%
-    slice_max(n = 10, order_by = n, with_ties = F) %>%
-    gt() %>%
-    tab_header(
-        title = "Top indirect electricity jobs",
-        subtitle = "Number of jobs by year"
-    ) %>%
-    fmt_number(
-        columns = vars(n),
-        decimals = 0
-    ) %>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_row_groups()
-    ) %>%
-    cols_label(
-        n = "Number of jobs",
-        occstring = "Title"
-    ) %>% 
-        gtsave("data/temp/top_indirect_electricity_jobs.png")
-```
-
-
-Read in the 1930 data
+1930 data
 
 ```{r}
-library(haven)
-
-df_census_1930 <- read_dta("data/census/1930_census_regression_dataset_excl_unbalanced_controls.dta")
-
-df_census_1930 %>%
-    colnames()
-
-df_census_1930_filtered <- df_census_1930 %>%
-    select(electricity_job_direct, electricity_job_indirect, birth_parish_treated) %>%
-    mutate(year = 1930)
-
-
-df_census_jobs_treated_and_control_filtered_collected <- df_census_jobs_treated_and_control_filtered %>%
-    select(year, birth_parish_treated, electricity_job_direct, electricity_job_indirect) %>%
-    rbind(df_census_1930_filtered)
-
-
 
 
 # Step 1: Calculate the proportions of electricity_job_direct for each year and group
@@ -1089,8 +1236,6 @@ proportion_df %>%
     scale_y_continuous(labels = scales::percent_format(accuracy = 0.001))
 
 ```
-
-
 
 Going long
 
@@ -1189,7 +1334,7 @@ proportion_df %>%
     labs(
         # title = "Difference in Share of Electricity Related Jobs",
         x = "Year",
-        y = "Difference in Share of Jobs \n(Early Access to Electricity - Other Parishes)",
+        y = "Difference in Share of Jobs \n(Early Access to Electricity - Control Parishes)",
         colour = "Job type",
         caption = "Note: dotted line indicates the year Olidan Power Station was built"
     ) +
@@ -1234,7 +1379,7 @@ proportion_df %>%
     labs(
         # title = "Difference in Share of Electricity Related Jobs",
         x = "Year",
-        y = "Difference in Share of Jobs \n(Early Access to Electricity - Other Parishes)",
+        y = "Difference in Share of Jobs \n(Early Access to Electricity - Control Parishes)",
         colour = "Job type",
         caption = "Note: dotted line indicates the year Olidan Power Station was built"
     ) +

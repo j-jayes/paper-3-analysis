@@ -36,7 +36,7 @@ oaxaca log_income age age_2 female marital_1 marital_2 marital_3 marital_5 ///
 eststo Model1
 
 * Tabulate the regression results and save them in TeX format
-esttab Model1 using $results_dir/15-kob-regression.tex, label replace ///
+esttab Model1 using $results_dir/15-ko.tex, label replace ///
   stats(ar2 N F mean_depvar, fmt(2 0 3 2) labels("R-squared" "Observations" "F-stat" "Mean Dependent Var")) ///
   cells(b(star fmt(3)) se(par fmt(2))) ///
   addnotes("Standard errors clustered at the parish level in parentheses")

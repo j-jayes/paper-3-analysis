@@ -99,7 +99,7 @@ df %>%
         TRUE ~ napp_title
     )) %>%
     mutate(treated = case_when(
-        treated == "Treated" ~ "Early electrifying parishes",
+        treated == "Treated" ~ "Western Line parishes",
         TRUE ~ "Control parishes"
     )) %>%
     mutate(

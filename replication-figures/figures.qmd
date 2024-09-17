@@ -253,7 +253,11 @@ Figure 5
 
 
 ```{r}
-df = read_rds(here::here("replication-data", "figure-5.rds"))
+df = read_rds(here::here("replication-data", "figure-5.rds")) %>% 
+mutate(current_parish_treated = case_when(
+    current_parish_treated == "Treated" ~ "Western Line",
+    TRUE ~ current_parish_treated
+))
 
 ggplot(df, aes(x = population, y = income_cumulative, colour = factor(current_parish_treated))) +
     geom_line() +
@@ -263,6 +267,7 @@ ggplot(df, aes(x = population, y = income_cumulative, colour = factor(current_pa
     coord_cartesian() +
     guides(colour = guide_legend(reverse = TRUE)) +
     labs(colour = "Parish of residence 1930") +
+    theme(legend.position = "bottom") +
     theme(
         panel.grid.minor.y = element_blank(),
         panel.grid.minor.x = element_blank(),
@@ -271,7 +276,7 @@ ggplot(df, aes(x = population, y = income_cumulative, colour = factor(current_pa
         text = element_text(family = "ibm", size = 18)
     )
 
-ggsave(filename = here::here("replication-figures", "Figure-5.png"), device = "png", width = 290, height = 231, units = "mm", dpi = 300)
+ggsave(filename = here::here("replication-figures", "Figure-5.png"), device = "png", width = 290, height = 290, units = "mm", dpi = 300)
 ```
 
 

@@ -40,8 +40,8 @@ lorenz_data <- df %>%
         income_cumulative = cumsum(income_incl_zero) / sum(income_incl_zero)
     ) %>%
     mutate(current_parish_treated = case_when(
-        current_parish_treated == 1 ~ "Treated",
-        current_parish_treated == 0 ~ "Control",
+        current_parish_treated == 1 ~ "Western Line parish",
+        current_parish_treated == 0 ~ "Control parish",
         TRUE ~ NA_character_
     ))
 
@@ -58,6 +58,7 @@ ggplot(lorenz_data, aes(x = population, y = income_cumulative, colour = factor(c
     coord_cartesian() +
     guides(colour = guide_legend(reverse = TRUE)) +
     labs(colour = "Parish of residence 1930") +
+    theme_bw() +
     theme(
         # panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),

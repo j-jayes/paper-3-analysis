@@ -93,28 +93,27 @@ ggsave(filename = here::here("figures/vox_cepr_blog_post_plot.jpeg"), device = "
 
 
 ```{r}
-
-
 # Create the tibble
 data <- tibble(
-  b = c(0, 7.282e-10, .70280862, .15341352, .11773917, .09669604, .15416652, .11166477, .04318744),
-  se = c(.00139692, .00221162, .0317901, .00690305, .0065265, .00655154, .00649636, .00601907, .00518303),
-  ll = c(-.00273792, -.00433472, .6405009, .13988374, .10494743, .08385521, .14143384, .09986757, .03302886),
-  ul = c(.00273792, .00433472, .76511627, .1669433, .13053091, .10953687, .1668992, .12346197, .05334602)
+    b = c(0, 7.282e-10, .70280862, .15341352, .11773917, .09669604, .15416652, .11166477, .04318744),
+    se = c(.00139692, .00221162, .0317901, .00690305, .0065265, .00655154, .00649636, .00601907, .00518303),
+    ll = c(-.00273792, -.00433472, .6405009, .13988374, .10494743, .08385521, .14143384, .09986757, .03302886),
+    ul = c(.00273792, .00433472, .76511627, .1669433, .13053091, .10953687, .1668992, .12346197, .05334602)
 )
 
-# rename columns to match the plot above 
+# rename columns to match the plot above
 data <- data %>% rename(Coefficient = b, Standard_Error = se, Lower = ll, Upper = ul)
 
 # add a column and call it "estimator" and fill it with the value "Unconditional"
 data <- data %>% mutate(Estimator = "Residualized QR")
 
 # add a column called decile and fill it with the values 5, 15, 25, 35, 45, 55, 65, 75, 85
-data <- data %>% mutate(decile = c(5, 15, 25, 35, 45, 55, 65, 75, 85)) %>% 
-janitor::clean_names()
+data <- data %>%
+    mutate(decile = c(5, 15, 25, 35, 45, 55, 65, 75, 85)) %>%
+    janitor::clean_names()
 
 # get df from above and add a column and call it "Estimator" and fill it with the value "Conditional"
-df <- df %>% mutate(estimator = "Conditional QR") 
+df <- df %>% mutate(estimator = "Conditional QR")
 
 # mutate to create the "Lower" and "Upper" columns
 df <- df %>% mutate(lower = coefficient - 1.96 * standard_error, upper = coefficient + 1.96 * standard_error)
@@ -124,28 +123,30 @@ data_combined <- bind_rows(data, df)
 
 # recreate the plot above
 data_combined %>%
-  mutate(estimator = fct_relevel(estimator, "Residualized QR", "Conditional QR")) %>%
-  ggplot(aes(decile, coefficient, colour = estimator, lty = estimator, shape = estimator)) +
-  geom_hline(yintercept = 0, lty = 2) +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 2) +
-  geom_line() +
-  geom_point(cex = 3) +
-  scale_colour_brewer(palette = "Dark2") +
-  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
-  scale_linetype_manual(values = c("Conditional QR" = "solid", "Residualized QR" = "dashed")) +
-  theme(legend.position = "bottom") +
-  labs(
-    x = "Percentile of the income distribution",
-    y = "Magnitude of regression coefficient",
-    colour = "Estimator"
-  ) +
-  theme(
-    # panel.grid.major.y = element_blank(),
-    plot.title = element_markdown(size = 32, family = "roboto"),
-    plot.title.position = "plot",
-    legend.position = "bottom",
-    text = element_text(family = "ibm", size = 18)
-  )
+    mutate(estimator = fct_relevel(estimator, "Residualized QR", "Conditional QR")) %>%
+    ggplot(aes(decile, coefficient, colour = estimator, lty = estimator, shape = estimator)) +
+    geom_hline(yintercept = 0, lty = 2) +
+    geom_errorbar(aes(ymin = lower, ymax = upper), width = 2) +
+    geom_line() +
+    geom_point(cex = 3) +
+    scale_colour_brewer(palette = "Dark2") +
+    scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+    scale_linetype_manual(values = c("Conditional QR" = "solid", "Residualized QR" = "dashed")) +
+    theme(legend.position = "bottom") +
+    labs(
+        x = "Percentile of the income distribution",
+        y = "Magnitude of regression coefficient",
+        colour = "Estimator",
+        shape = "Estimator",
+        lty = "Estimator",
+    ) +
+    theme(
+        # panel.grid.major.y = element_blank(),
+        plot.title = element_markdown(size = 32, family = "roboto"),
+        plot.title.position = "plot",
+        legend.position = "bottom",
+        text = element_text(family = "ibm", size = 18)
+    )
 
 ggsave(filename = here::here("figures/041-coefficient-plot-treated-by-income-and-estimator.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
 ```
@@ -204,9 +205,9 @@ process_year <- function(coefficients, standard_errors, year) {
       decile = as.numeric(str_extract(decile, "\\d\\d")),
       year = year,
       Variable = case_when(
-        Variable == str_c("Birth Parish (Treated) = 1") ~ "Treated",
+        Variable == str_c("Birth Parish (Treated) = 1") ~ "Western Line parish",
         Variable == str_c("popular_movement_density_", year_str, "_FA") ~ "Union density",
-        Variable == str_c("Birth Parish (Treated) = 1 × popular_movement_density_", year_str, "_FA") ~ "Treated X Union density"
+        Variable == str_c("Birth Parish (Treated) = 1 × popular_movement_density_", year_str, "_FA") ~ "Western Line parish X Union density"
       )
     )
   
@@ -218,9 +219,9 @@ process_year <- function(coefficients, standard_errors, year) {
       decile = as.numeric(str_extract(decile, "\\d\\d")),
       year = year,
       Variable = case_when(
-        Variable == str_c("Birth Parish (Treated) = 1") ~ "Treated",
+        Variable == str_c("Birth Parish (Treated) = 1") ~ "Western Line parish",
         Variable == str_c("popular_movement_density_", year_str, "_FA") ~ "Union density",
-        Variable == str_c("Birth Parish (Treated) = 1 × popular_movement_density_", year_str, "_FA") ~ "Treated X Union density"
+        Variable == str_c("Birth Parish (Treated) = 1 × popular_movement_density_", year_str, "_FA") ~ "Western Line parish X Union density"
       )
     )
   
@@ -753,8 +754,41 @@ ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percenti
 ```
 
 
+Just 1900 plot
 
 ```{r}
+data_1900 <- all_data %>% filter(year == "1900")
+
+# Create a facet plot
+ggplot(data_1900, aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +
+  geom_line() +
+  geom_point(cex = 2, alpha = .8) +
+  geom_errorbar(aes(ymin = coefficient - se, ymax = coefficient + se), width = 0.2) +
+  # facet_grid(year ~ .) +
+  theme_light() +
+  scale_colour_brewer(palette = "Dark2") +
+  geom_hline(yintercept = 0, lty = 2) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1), breaks = seq(10, 90, 10)) +
+  theme(legend.position = "bottom") +
+  labs(
+    x = "Percentile of the income distribution",
+    y = "Magnitude of regression coefficient (standardized)",
+    # title = "Coefficients from quantile regression",
+    # subtitle = "Log income is outcome variable.\nControls include, age, gender, schooling, HISCLASS, marital status. \nErrors clustered at parish level. \nError bars show 95% CI"
+  ) +
+  theme(
+    # panel.grid.major.y = element_blank(),
+    plot.title = element_markdown(size = 32, family = "roboto"),
+    plot.title.position = "plot",
+    legend.position = "bottom",
+    text = element_text(family = "ibm", size = 18)
+  )
+
+ggsave(filename = here::here("figures/081-union-density-effect-5th-95th-percentiles_v6_2.jpeg"), device = "jpeg", width = 290, height = 231, units = "mm", dpi = 300)
+```
+
+```{r}
+
 
 # Create a facet plot
 ggplot(all_data %>% filter(year != 1900), aes(x = decile, y = coefficient, color = Variable, lty = Variable, shape = Variable)) +

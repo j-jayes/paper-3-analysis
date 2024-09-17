@@ -10,7 +10,6 @@ new_df = pd.read_csv('data/balance-tests/balance_tests_1900_with_outcomes_250.cs
 
 numerical_columns = ['shc1', 'shc2', 'shc3', 'shc4', 'shc5', 'shc6', 'shc7', 'llabforce']
 
-
 # Prepare the data for the new dataset
 X_new = new_df[numerical_columns]  # Features for propensity score
 y_new = new_df['treated']  # Treatment indicator
@@ -119,23 +118,23 @@ propensity_after_control = matched_df_new[matched_df_new['group'] == 'control'][
 
 # Create the plot
 fig, axes = plt.subplots(1, 2, figsize=(14, 6), sharey=True)
-fig.suptitle('Propensity Score Matching Visualization')
+# fig.suptitle('Propensity Score Matching Visualization')
 
 # Before Matching
-axes[0].scatter(propensity_before_treatment, [0] * len(propensity_before_treatment), label='Treatment (Before)', alpha=0.6)
+axes[0].scatter(propensity_before_treatment, [0] * len(propensity_before_treatment), label='Western Line (Before)', alpha=0.6)
 axes[0].scatter(propensity_before_control, [1] * len(propensity_before_control), label='Control (Before)', alpha=0.6)
 axes[0].set_title('Before Matching')
 axes[0].set_yticks([0, 1])
-axes[0].set_yticklabels(['Treatment', 'Control'])
+axes[0].set_yticklabels(['Western Line', 'Control'])
 axes[0].set_xlabel('Propensity Score')
 axes[0].legend()
 
 # After Matching
-axes[1].scatter(propensity_after_treatment, [0] * len(propensity_after_treatment), label='Treatment (After)', alpha=0.6)
+axes[1].scatter(propensity_after_treatment, [0] * len(propensity_after_treatment), label='Western Line (After)', alpha=0.6)
 axes[1].scatter(propensity_after_control, [1] * len(propensity_after_control), label='Control (After)', alpha=0.6)
 axes[1].set_title('After Matching')
 axes[1].set_yticks([0, 1])
-axes[1].set_yticklabels(['Treatment', 'Control'])
+axes[1].set_yticklabels(['Western Line', 'Control'])
 axes[1].set_xlabel('Propensity Score')
 axes[1].legend()
 
